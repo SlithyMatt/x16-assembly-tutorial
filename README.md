@@ -169,3 +169,5 @@ workflow exactly as seen in these videos.
 - https://en.wikipedia.org/wiki/Endianness
 - https://en.wikipedia.org/wiki/Computer_memory
 - https://en.wikipedia.org/wiki/Boolean_algebra
+- https://en.wikibooks.org/wiki/6502_Assembly
+- http://www.6502.org/tutorials/65c02opcodes.html
