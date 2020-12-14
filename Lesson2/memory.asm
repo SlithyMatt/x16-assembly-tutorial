@@ -23,9 +23,9 @@ start:
    ldx #1            ; immediate
    lda data,x        ; absolute indexed with X
    sta ZP_DATA,x     ; zero page indexed with X
-   txa               ; implicit (transfer X to A)
-   tay               ; implicit (transfer A to Y)
-   iny               ; implicit (increment Y)
+   txa               ; implied (transfer X to A)
+   tay               ; implied (transfer A to Y)
+   iny               ; implied (increment Y)
    lda data,y        ; absolute indexed with Y
    sta ZP_DATA,y     ; zero page indexed with Y
 
@@ -44,7 +44,7 @@ start:
    ; Copy data to results via ZP pointers
    lda (ZP_PTR_1)    ; zero page indirect
    sta results       ; absolute
-   inx               ; implicit
+   inx               ; implied
    lda (ZP_PTR_1,x)  ; zero page indexed indirect
    sta results+1     ; absolute calculated
    lda (ZP_PTR_1),y  ; zero page indirect indexed with Y
