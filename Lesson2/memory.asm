@@ -4,11 +4,11 @@
 .segment "ONCE"
 .segment "CODE"
 
-   jmp start
-
 ZP_PTR_1 = $30
 ZP_PTR_2 = $32
 ZP_DATA  = $34
+
+   jmp start         ; absolute
 
 data:
 .byte $01,$23,$45,$67,$89,$AB,$CD,$EF
