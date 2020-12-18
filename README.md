@@ -169,5 +169,6 @@ workflow exactly as seen in these videos.
 - https://en.wikipedia.org/wiki/Endianness
 - https://en.wikipedia.org/wiki/Computer_memory
 - https://en.wikipedia.org/wiki/Boolean_algebra
-- https://en.wikibooks.org/wiki/6502_Assembly
-- http://www.6502.org/tutorials/65c02opcodes.html
+- https://en.wikibooks.org/wiki/6502_Assembly   - Baseline 6502 instruction set
+- http://www.6502.org/tutorials/65c02opcodes.html  - Additional instructions and addressing modes for 65C02
+- https://atom.io/packages/language-65asm - 6502 assembly syntax highlighting for Atom
