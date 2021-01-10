@@ -5,6 +5,8 @@ This is a repo containing all the materials from my YouTube series. Available
 now are the following lessons:
 
 - Lesson 1: The Basics
+- Lesson 2: Addressing Modes
+- Lesson 3: Branching and Subroutines
 
 More to come!
 
