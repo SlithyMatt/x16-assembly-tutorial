@@ -7,6 +7,7 @@ now are the following lessons:
 - Lesson 1: The Basics
 - Lesson 2: Addressing Modes
 - Lesson 3: Branching and Subroutines
+- Lesson 4: Arithmetic and Logic
 
 More to come!
 
