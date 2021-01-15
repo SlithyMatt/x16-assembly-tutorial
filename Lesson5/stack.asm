@@ -38,13 +38,14 @@ start:
    ply
    jsr print_regs
    plp
-   jsr print_regs   
+   jsr print_regs
    rts
 
 print_regs:
+   php
    pha
    phx
-   php
+   php ; push P again for quick retrieval
    jsr print_hex
    lda #SPACE
    jsr CHROUT
@@ -59,20 +60,17 @@ print_regs:
    tsx
    txa
    clc
-   adc #5 ; calculate SP from before JSR
+   adc #6 ; calculate SP from before JSR
    jsr print_hex
    lda #SPACE
    jsr CHROUT
    pla ; pull earlier P into A
-   pha ; push it again to pull back into P later
    jsr print_hex
-   lda #SPACE
-   jsr CHROUT
    lda #NEWLINE
    jsr CHROUT
-   plp
    plx
    pla
+   plp
    rts
 
 
