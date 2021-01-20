@@ -14,6 +14,7 @@ CHROUT   = $FFD2
 ; PETSCII
 NEWLINE  = $0D
 WHITE    = $05
+SPACE    = $20
 LT_RED   = $96
 LT_GREEN = $99
 LT_GRAY  = $9B
@@ -38,24 +39,31 @@ start:
    bne @read
 @done:
    stx size
+   lda #NEWLINE
+   jsr CHROUT
 
    ldx #0
 print:
    lda input,x
    sta CODE
+   bit CODE
+   bmi @gray
    bbs6 CODE,@check5
    lda #LT_RED
    bra @print_code
 @check5:
-   bbs5 CODE,@gray
    lda #LT_GREEN
    bra @print_code
+   
 @gray:
    lda #LT_GRAY
 @print_code:
    jsr CHROUT
    lda CODE
    jsr CHROUT
+   inx
+   cpx size
+   bmi print
    lda #NEWLINE
    jsr CHROUT
 
@@ -64,18 +72,42 @@ print:
    lda input
    sta CODE
    jsr print_hex
+   lda #SPACE
+   jsr CHROUT
+   lda CODE
+   jsr CHROUT
    lda #NEWLINE
    jsr CHROUT
+
    lda #$80
    tsb CODE
    beq @red
    lda #LT_GRAY
    bra @print_mod
+@red:
    lda #LT_RED
-@print_mod
+@print_mod:
    jsr CHROUT
    lda CODE
    jsr print_hex
+   lda #SPACE
+   jsr CHROUT
+   lda CODE
+   jsr CHROUT
+
+   lda #NEWLINE
+   jsr CHROUT
+   lda #LT_GREEN
+   jsr CHROUT
+   rmb7 CODE
+   lda CODE
+   jsr print_hex
+   lda #SPACE
+   jsr CHROUT
+   lda CODE
+   jsr CHROUT
+   lda #WHITE
+   jsr CHROUT
    rts
 
 print_hex:
