@@ -8,6 +8,8 @@ now are the following lessons:
 - Lesson 2: Addressing Modes
 - Lesson 3: Branching and Subroutines
 - Lesson 4: Arithmetic and Logic
+- Lesson 5: The Stack
+- Lesson 6: A Bit Advanced
 
 More to come!
 
@@ -175,3 +177,4 @@ workflow exactly as seen in these videos.
 - https://en.wikibooks.org/wiki/6502_Assembly   - Baseline 6502 instruction set
 - http://www.6502.org/tutorials/65c02opcodes.html  - Additional instructions and addressing modes for 65C02
 - https://atom.io/packages/language-65asm - 6502 assembly syntax highlighting for Atom
+- https://style64.org/petscii/ - An interactive PETSCII table

@@ -48,13 +48,13 @@ print:
    sta CODE
    bit CODE
    bmi @gray
-   bbs6 CODE,@check5
+   bbs6 CODE,@green
    lda #LT_RED
    bra @print_code
-@check5:
+@green:
    lda #LT_GREEN
    bra @print_code
-   
+
 @gray:
    lda #LT_GRAY
 @print_code:
