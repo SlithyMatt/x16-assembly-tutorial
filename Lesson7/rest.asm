@@ -30,6 +30,7 @@ start:
    ldx #NEWLINE
    txa
    jsr CHROUT ; <newline>
+   
    stz sauce
    ldy sauce
    tya
@@ -41,10 +42,25 @@ start:
    plp
    php
    pla
-   jsr print_hex
+   jsr print_hex ; 30
+   txa
+   jsr CHROUT ; <newline>
 
+   sed
+   php
+   cld
+   pla
+   jsr print_hex ; 38
+   txa
+   jsr CHROUT ; <newline>
 
-
+   sei
+   php
+   cli
+   pla
+   jsr print_hex ; 34
+   txa
+   jsr CHROUT ; <newline>
    rts
 
 print_hex:
