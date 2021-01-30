@@ -13,9 +13,6 @@ CHROUT   = $FFD2
 ; PETSCII
 NEWLINE  = $0D
 
-; Constants
-MAX_INPUT = 40
-
    jmp start
 
 sauce: .byte $A1
@@ -30,7 +27,7 @@ start:
    ldx #NEWLINE
    txa
    jsr CHROUT ; <newline>
-   
+
    stz sauce
    ldy sauce
    tya
