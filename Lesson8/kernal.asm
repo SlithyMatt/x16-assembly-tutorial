@@ -5,7 +5,7 @@
 .segment "CODE"
 
 ; Zero Page
-
+ZP_PTR   = $30
 
 ; Kernal
 SETLFS   = $FFBA
@@ -21,29 +21,155 @@ PLOT     = $FFF0
 ; VERA
 DC_HSCALE   = $9F2A
 DC_VSCALE   = $9F2B
-2X_SCALE    = 64
 
 ; PETSCII
-CLR      = $93
+RETURN      = $0D
+SPACE       = $20
+COLON       = $3A
+CLR         = $93
+
+; Constants
+SCALE_2X    = 64
+STR_MAX     = 10
+
+.macro PRINT_LINE row, letter, str_addr
+   clc ; Set cursor position
+   ldx #row ; row
+   ldy #5   ; column
+   jsr PLOT
+   lda #letter
+   jsr CHROUT
+   lda #COLON
+   jsr CHROUT
+   lda #SPACE
+   jsr CHROUT
+   ldx #0
+:  lda str_addr,x
+   jsr CHROUT
+   inx
+   cpx #STR_MAX
+   bne :-
+.endmacro
 
    jmp start
 
+filename: .byte "abc"
+end_filename:
 
+a_str: .res STR_MAX
+b_str: .res STR_MAX
+c_str: .res STR_MAX
+end_strings:
 
 start:
    jsr SCREEN
    cpx #40
    beq @check_height
-   lda #2X_SCALE
+   lda #SCALE_2X
    sta DC_HSCALE ; set horizontal scale to 2x (40 columns)
 @check_height:
    cpy #30
-   beq @clear_screen
-   lda #2X_SCALE
+   beq @load_file
+   lda #SCALE_2X
    sta DC_VSCALE ; set vertical scale to 2x (30 rows)
-@clear_screen:
+@load_file:
+   lda #1   ; Logical Number = 1
+   ldx #8   ; Device = "SD card" (emulation host FS)
+   ldy #0   ; Secondary Address = 0
+   jsr SETLFS
+   lda #(end_filename-filename) ; filename length
+   ldx #<filename
+   ldy #>filename
+   jsr SETNAM
+   lda #0   ; load
+   ldx #<a_str
+   ldy #>a_str
+   jsr LOAD
+   bcc @init_screen
+; file load failed - initialize with spaces
+   ldx #0
+   lda #SPACE
+@init_strings:
+   sta a_str,x
+   inx
+   cpx #(STR_MAX*3)
+   bne @init_strings
+@init_screen:
+   jsr draw_screen
+@main_loop:
+   jsr GETIN
+   cmp #0
+   beq @main_loop
+   cmp #$51 ; Q
+   beq @quit
+   cmp #$41 ; A
+   beq @enter_a
+   cmp #$42 ; B
+   beq @enter_b
+   cmp #$43 ; C
+   bne @main_loop
+   ldx #15
+   lda #<c_str
+   sta ZP_PTR
+   lda #>c_str
+   sta ZP_PTR+1
+   bra @input
+@enter_a:
+   ldx #5
+   lda #<a_str
+   sta ZP_PTR
+   lda #>a_str
+   sta ZP_PTR+1
+   bra @input
+@enter_b:
+   ldx #10
+   lda #<b_str
+   sta ZP_PTR
+   lda #>b_str
+   sta ZP_PTR+1
+@input:
+   clc
+   ldy #8
+   jsr PLOT
+   ldy #0
+@input_loop:
+   jsr CHRIN
+   cmp #RETURN
+   beq @pad
+   sta (ZP_PTR),y
+   iny
+   cpy #STR_MAX
+   bne @input_loop
+@flush:
+   jsr CHRIN
+   cmp #RETURN
+   bne @flush
+   bra @redraw
+@pad:
+   lda #SPACE
+   sta (ZP_PTR),y
+   iny
+   cpy #STR_MAX
+   bne @pad
+@redraw:
+   jsr draw_screen
+   jmp @main_loop
+@quit:
+   ; save bytes between a_str and end_strings to file
+   lda #<a_str
+   sta ZP_PTR
+   lda #>a_str
+   sta ZP_PTR+1
+   lda #ZP_PTR
+   ldx #<end_strings
+   ldy #>end_strings
+   jsr SAVE
+   rts
+
+draw_screen:
    lda #CLR
    jsr CHROUT
-   
-
+   PRINT_LINE 5, $41, a_str
+   PRINT_LINE 10, $42, b_str
+   PRINT_LINE 15, $43, c_str
    rts
