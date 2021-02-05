@@ -140,10 +140,6 @@ start:
    iny
    cpy #STR_MAX
    bne @input_loop
-@flush:
-   jsr CHRIN
-   cmp #RETURN
-   bne @flush
    bra @redraw
 @pad:
    lda #SPACE
