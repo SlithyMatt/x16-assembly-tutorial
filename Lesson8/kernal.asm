@@ -135,18 +135,11 @@ start:
 @input_loop:
    jsr CHRIN
    cmp #RETURN
-   beq @pad
+   beq @redraw
    sta (ZP_PTR),y
    iny
    cpy #STR_MAX
    bne @input_loop
-   bra @redraw
-@pad:
-   lda #SPACE
-   sta (ZP_PTR),y
-   iny
-   cpy #STR_MAX
-   bne @pad
 @redraw:
    jsr draw_screen
    jmp @main_loop
