@@ -56,9 +56,9 @@ STR_MAX     = 10
 filename: .byte "abc"
 end_filename:
 
-a_str: .res STR_MAX
-b_str: .res STR_MAX
-c_str: .res STR_MAX
+a_str: .res STR_MAX, SPACE
+b_str: .res STR_MAX, SPACE
+c_str: .res STR_MAX, SPACE
 end_strings:
 
 start:
@@ -85,16 +85,6 @@ start:
    ldx #<a_str
    ldy #>a_str
    jsr LOAD
-   bcc @init_screen
-; file load failed - initialize with spaces
-   ldx #0
-   lda #SPACE
-@init_strings:
-   sta a_str,x
-   inx
-   cpx #(STR_MAX*3)
-   bne @init_strings
-@init_screen:
    jsr draw_screen
 @main_loop:
    jsr GETIN
