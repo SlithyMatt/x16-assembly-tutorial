@@ -4,6 +4,8 @@
 .segment "ONCE"
 .segment "CODE"
 
+   jmp start
+
 ; Zero Page
 ZP_PTR            = $30
 
@@ -42,6 +44,7 @@ LOWER_UPPER       = $C400
 
 ; Kernal
 CHROUT            = $FFD2
+GETIN             = $FFE4
 
 ; PETSCII Codes
 WHITE             = $05
@@ -53,10 +56,6 @@ NINE_CHAR         = $39
 C_CHAR            = $43
 I_CHAR            = $49
 O_CHAR            = $4F
-P_CHAR            = $50
-Q_CHAR            = $51
-R_CHAR
-S_CHAR            = $53
 T_CHAR            = $54
 CLR               = $93
 
@@ -65,8 +64,6 @@ REVERSE           = $80
 
 ; globals:
 text_colors: .byte $61
-
-   jmp start
 
 smile:
 .byte %00111100
@@ -140,8 +137,11 @@ start:
    sta VERA_data1 ; inverted pixel row
    iny
    bne @copy_char_loop
+   inc ZP_PTR+1
    dex
    bne @copy_char_loop
+   lda #BASIC_BANK
+   sta ROM_BANK
 
    ; Configure Layer 0: 256-color text, Upper/Graphics PETSCII
    lda #$68 ; 128x64, 256-color text
@@ -151,6 +151,19 @@ start:
    lda #(VRAM_petscii >> 9)
    sta VERA_L0_tilebase
 
+   ; Initialze Palette VRAM (Color 1 = White)
+   stz VERA_ctrl
+   lda #($10 | ^VRAM_palette) ;  stride = 1
+   sta VERA_addr_bank
+   lda #>VRAM_palette
+   sta VERA_addr_high
+   lda #<(VRAM_palette+2) ; third byte of palette
+   sta VERA_addr_low
+   lda #$FF
+   sta VERA_data0
+   lda #$0F
+   sta VERA_data0
+
    ; Populate Layer 0: Palette as reverse spaces
    stz VERA_ctrl
    lda #($10 | ^VRAM_layer0_map)
@@ -158,10 +171,10 @@ start:
    lda #>VRAM_layer0_map
    sta VERA_addr_high
    stz VERA_addr_low
+   lda #(REVERSE | SPACE)
    ldx #0
    ldy #16
 @pal_loop:
-   lda #(REVERSE | SPACE)
    sta VERA_data0 ; screen code: reversed space (all foreground)
    stx VERA_data0 ; color index
    inx
@@ -170,6 +183,7 @@ start:
    bne @pal_loop
    inc VERA_addr_high
    stz VERA_addr_low
+   ldy #16
    bra @pal_loop
 
 @check_keyboard:
@@ -184,20 +198,22 @@ start:
    jsr set_color
    bra @check_keyboard
 @check_c:
-   cmp #CHAR_C
+   cmp #C_CHAR
    bne @check_i
    jsr toggle_color1
    bra @check_keyboard
 @check_i:
-   cmp #CHAR_I
+   cmp #I_CHAR
    bne @check_jump
    jsr zoom_in
    bra @check_keyboard
 @check_jump:
-   cmp #(CHAR_T+1)
+   cmp #O_CHAR
+   bmi @check_keyboard
+   cmp #(T_CHAR+1)
    bpl @check_keyboard
    sec
-   sbc #CHAR_O
+   sbc #O_CHAR
    asl ; A = (character code - 'O')*2
    tax
    jmp (@jump_table,x)
@@ -250,7 +266,7 @@ set_color:
    bra @start
 @set_foreground:
    and #$0F
-   tya
+   tay
    lda text_colors
    and #$F0
    bra @set_colors
@@ -272,7 +288,7 @@ set_color:
 zoom_in:
    lda VERA_dc_hscale
    cmp #1 ; maximum zoom level
-   bmi @return
+   beq @return
    lsr VERA_dc_hscale
    lsr VERA_dc_vscale
 @return:
@@ -281,7 +297,7 @@ zoom_in:
 zoom_out:
    lda VERA_dc_hscale
    cmp #128 ; zoom level = 100%
-   bpl @return
+   beq @return
    asl VERA_dc_hscale
    asl VERA_dc_vscale
 @return:
@@ -289,9 +305,9 @@ zoom_out:
 
 toggle_color1:
    stz VERA_ctrl
-   lda #^(VRAM_palette) ;  no stride
+   lda #^VRAM_palette ;  no stride
    sta VERA_addr_bank
-   lda #>(VRAM_palette)
+   lda #>VRAM_palette
    sta VERA_addr_high
    lda #<(VRAM_palette+2) ; third byte of palette
    sta VERA_addr_low
@@ -317,9 +333,29 @@ toggle_layer1:
    rts
 
 toggle_charset:
-
+   lda VERA_L1_tilebase
+   cmp #(VRAM_petscii >> 9)
+   beq @set_lower
+   lda #(VRAM_petscii >> 9)
+   bra @set
+@set_lower:
+   lda #(VRAM_lowerchars >> 9)
+@set:
+   sta VERA_L1_tilebase
    rts
 
 make_smile:
-
+   stz VERA_ctrl
+   lda #($10 | ^VRAM_petscii) ; stride = 1
+   sta VERA_addr_bank
+   lda #>VRAM_petscii
+   sta VERA_addr_high
+   stz VERA_addr_low ; screen code 0 = '@'
+   ldx #0
+@loop:
+   lda smile,x
+   sta VERA_data0
+   inx
+   cpx #8
+   bne @loop
    rts
