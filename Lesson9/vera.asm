@@ -272,7 +272,7 @@ set_color:
    bra @set_colors
 @start:
    stz VERA_ctrl
-   lda #($20 | ^VRAM_layer1_map) ; stride = 1
+   lda #($20 | ^VRAM_layer1_map) ; stride = 2
    sta VERA_addr_bank
    lda #>VRAM_layer1_map
    sta VERA_addr_high
