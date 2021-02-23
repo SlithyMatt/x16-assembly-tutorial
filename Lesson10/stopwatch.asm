@@ -6,8 +6,8 @@
 
    jmp start
 
-; Zero Page
-ZP_PTR            = $30
+; RAM Interrupt Vectors
+IRQVec            = $0314
 
 ; VERA
 VERA_addr_low     = $9F20
@@ -22,11 +22,10 @@ VERA_dc_hscale    = $9F2A
 VERA_dc_vscale    = $9F2B
 DISPLAY_SCALE     = 32 ; 4X zoom
 
-; ROM
+; Kernal
 CHROUT            = $FFD2
 GETIN             = $FFE4
 PLOT              = $FFF0
-IRQ_VECTOR        = $FFFE ; Fixed for 65C02
 
 ; PETSCII
 CHAR_0            = $30
@@ -38,10 +37,11 @@ CLR               = $93
 
 ; constants
 DISPLAY_X         = 6
-DISPLAY_Y         = 14
+DISPLAY_Y         = 7
 
 ; globals
 default_irq_vector: .addr 0
+running: .byte 0
 ticks: .byte 0
 seconds: .byte 0
 minutes: .byte 0
@@ -79,35 +79,20 @@ minutes: .byte 0
 .endmacro
 
 start:
-   ; backup ROM IRQ vector to ZP pointer
-   lda IRQ_VECTOR
-   sta ZP_PTR
-   lda IRQ_VECTOR+1
-   sta ZP_PTR+1
-
-   ; backup default RAM IRQ vector to call from custom handler
-   lda (ZP_PTR)
+   ; backup default RAM IRQ vector
+   lda IRQVec
    sta default_irq_vector
-   ldy #1
-   lda (ZP_PTR),y
+   lda IRQVec+1
    sta default_irq_vector+1
 
-   ; disable IRQ while vector is changing
-   sei
 
    ; overwrite RAM IRQ vector with custom handler address
+   sei ; disable IRQ while vector is changing
    lda #<custom_irq_handler
-   sta (ZP_PTR)
+   sta IRQVec
    lda #>custom_irq_handler
-   sta (ZP_PTR),y
-
-   ; disable VERA VSYNC interrupts
-   lda VERA_ien
-   and #(VSYNC_BIT ^ $FF) ; clear VSYNC bit
-   sta VERA_ien
-
-   ; enable IRQ now that vector is properly set
-   cli
+   sta IRQVec+1
+   cli ; enable IRQ now that vector is properly set
 
    ; Initialize counters and display
    lda #CLR
@@ -115,12 +100,14 @@ start:
    lda #DISPLAY_SCALE
    sta VERA_dc_hscale
    sta VERA_dc_vscale ; zoom level set
+   stz running ; not running at first
    stz minutes
    stz seconds
    stz ticks   ; time reset to 00:00:00
    PRINT_DISPLAY
 
 @loop:
+   wai
    jsr GETIN
    cmp #0
    beq @loop ; no input
@@ -138,16 +125,20 @@ start:
    stz ticks   ; time reset to 00:00:00
    PRINT_DISPLAY ; update display immediately in case clock is stopped
    sei ; enable interrupts
-   bra @loop
+   jmp @loop
 @start_stop:
-   lda VERA_ien
-   eor #VSYNC_BIT ; flip the VSYNC interrupt enable bit
-   sta VERA_ien
+   lda running
+   eor #$01 ; flip the boolean flag
+   sta running
    jmp @loop
 @return:
    rts
 
 custom_irq_handler:
+   lda running
+   bne @update_ticks ; timer running
+   jmp @continue ; no update to counters, just continue ISR
+@update_ticks:
    ; custom IRQ handling
    sed ; enter decimal mode
    lda ticks
@@ -162,11 +153,13 @@ custom_irq_handler:
    bra @print
 @update_seconds:
    lda seconds
+   clc
    adc #1
    cmp #$60
    bne @next_second ; seconds not rolling over
    stz seconds ; reset seconds
    lda minutes
+   clc
    adc #1 ; just increment minutes (will roll over after $99)
    sta minutes
    bra @print
@@ -176,6 +169,7 @@ custom_irq_handler:
    cld ; exit decimal mode
    PRINT_DISPLAY ; update display during interrupt to prevent tearing
 
+@continue:
    ; continue to default IRQ handler
    jmp (default_irq_vector)
    ; RTI will happen after jump
