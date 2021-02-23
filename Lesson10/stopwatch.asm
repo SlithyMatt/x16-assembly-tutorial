@@ -119,12 +119,12 @@ start:
    beq @return ; Q = quit
    bra @loop ; unexpected code, ignore
 @reset:
-   cli ; disable interrupts, in case clock is running
+   sei ; disable interrupts, in case clock is running
    stz minutes
    stz seconds
    stz ticks   ; time reset to 00:00:00
    PRINT_DISPLAY ; update display immediately in case clock is stopped
-   sei ; enable interrupts
+   cli ; enable interrupts
    jmp @loop
 @start_stop:
    lda running
