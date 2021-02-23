@@ -143,7 +143,7 @@ start:
    lda VERA_ien
    eor #VSYNC_BIT ; flip the VSYNC interrupt enable bit
    sta VERA_ien
-   bra @loop
+   jmp @loop
 @return:
    rts
 

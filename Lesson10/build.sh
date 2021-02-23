@@ -1,3 +1,3 @@
 #!/bin/sh
 
-cl65 -t cx16 -o ISR.PRG -l isr.list isr.asm
+cl65 -t cx16 -o SW.PRG -l stopwatch.list stopwatch.asm
