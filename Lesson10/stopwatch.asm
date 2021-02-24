@@ -85,13 +85,14 @@ start:
    lda IRQVec+1
    sta default_irq_vector+1
 
-
    ; overwrite RAM IRQ vector with custom handler address
    sei ; disable IRQ while vector is changing
    lda #<custom_irq_handler
    sta IRQVec
    lda #>custom_irq_handler
    sta IRQVec+1
+   lda #VSYNC_BIT ; make VERA only generate VSYNC IRQs
+   sta VERA_ien
    cli ; enable IRQ now that vector is properly set
 
    ; Initialize counters and display
@@ -116,7 +117,7 @@ start:
    cmp #CHAR_S
    beq @start_stop ; S = start/stop
    cmp #CHAR_Q
-   beq @return ; Q = quit
+   beq @quit ; Q = quit
    bra @loop ; unexpected code, ignore
 @reset:
    sei ; disable interrupts, in case clock is running
@@ -131,13 +132,22 @@ start:
    eor #$01 ; flip the boolean flag
    sta running
    jmp @loop
-@return:
+@quit:
+   ; restore default IRQ vector
+   lda default_irq_vector
+   sta IRQVec
+   lda default_irq_vector+1
+   sta IRQVec+1
    rts
 
 custom_irq_handler:
    lda running
    bne @update_ticks ; timer running
-   jmp @continue ; no update to counters, just continue ISR
+   jmp @continue ; timer stopped, no tick update
+   lda VERA_isr
+   and #VSYNC_BIT
+   bne @update_ticks ; VSYNC
+   jmp @continue ; non-VSYNC IRQ, no tick update
 @update_ticks:
    ; custom IRQ handling
    sed ; enter decimal mode
