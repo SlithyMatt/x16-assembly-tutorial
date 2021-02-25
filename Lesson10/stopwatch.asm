@@ -25,7 +25,6 @@ DISPLAY_SCALE     = 32 ; 4X zoom
 ; Kernal
 CHROUT            = $FFD2
 GETIN             = $FFE4
-PLOT              = $FFF0
 
 ; PETSCII
 CHAR_0            = $30
@@ -46,7 +45,6 @@ ticks: .byte 0
 seconds: .byte 0
 minutes: .byte 0
 
-; macros
 .macro PRINT_DECIMAL num
    lda num
    lsr
@@ -59,23 +57,6 @@ minutes: .byte 0
    and #$0F
    ora #CHAR_0
    sta VERA_data0
-.endmacro
-
-.macro PRINT_DISPLAY
-   stz VERA_ctrl
-   lda #$20 ; stride = 2
-   sta VERA_addr_bank
-   lda #DISPLAY_Y
-   sta VERA_addr_high
-   lda #(DISPLAY_X * 2)
-   sta VERA_addr_low
-   PRINT_DECIMAL minutes
-   lda #COLON
-   sta VERA_data0
-   PRINT_DECIMAL seconds
-   lda #COLON
-   sta VERA_data0
-   PRINT_DECIMAL ticks
 .endmacro
 
 start:
@@ -105,7 +86,7 @@ start:
    stz minutes
    stz seconds
    stz ticks   ; time reset to 00:00:00
-   PRINT_DISPLAY
+   jsr print_display
 
 @loop:
    wai
@@ -124,14 +105,14 @@ start:
    stz minutes
    stz seconds
    stz ticks   ; time reset to 00:00:00
-   PRINT_DISPLAY ; update display immediately in case clock is stopped
+   jsr print_display ; update display immediately in case clock is stopped
    cli ; enable interrupts
-   jmp @loop
+   bra @loop
 @start_stop:
    lda running
    eor #$01 ; flip the boolean flag
    sta running
-   jmp @loop
+   bra @loop
 @quit:
    ; restore default IRQ vector
    lda default_irq_vector
@@ -142,13 +123,10 @@ start:
 
 custom_irq_handler:
    lda running
-   bne @update_ticks ; timer running
-   jmp @continue ; timer stopped, no tick update
+   beq @continue ; timer stopped, no tick update
    lda VERA_isr
    and #VSYNC_BIT
-   bne @update_ticks ; VSYNC
-   jmp @continue ; non-VSYNC IRQ, no tick update
-@update_ticks:
+   beq @continue ; non-VSYNC IRQ, no tick update
    ; custom IRQ handling
    sed ; enter decimal mode
    lda ticks
@@ -177,9 +155,25 @@ custom_irq_handler:
    sta seconds
 @print:
    cld ; exit decimal mode
-   PRINT_DISPLAY ; update display during interrupt to prevent tearing
-
+   jsr print_display ; update display during interrupt to prevent tearing
 @continue:
    ; continue to default IRQ handler
    jmp (default_irq_vector)
    ; RTI will happen after jump
+
+print_display:
+   stz VERA_ctrl
+   lda #$20 ; stride = 2
+   sta VERA_addr_bank
+   lda #DISPLAY_Y
+   sta VERA_addr_high
+   lda #(DISPLAY_X * 2)
+   sta VERA_addr_low
+   PRINT_DECIMAL minutes
+   lda #COLON
+   sta VERA_data0
+   PRINT_DECIMAL seconds
+   lda #COLON
+   sta VERA_data0
+   PRINT_DECIMAL ticks
+   rts
