@@ -10,6 +10,10 @@ now are the following lessons:
 - Lesson 4: Arithmetic and Logic
 - Lesson 5: The Stack
 - Lesson 6: A Bit Advanced
+- Lesson 7: The Rest
+- Lesson 8: Meet the Kernal
+- Lesson 9: Hello, VERA!
+- Lesson 10: Interrupts
 
 More to come!
 
@@ -152,7 +156,19 @@ export PATH=$PATH:$HOME/workspace/cc65/bin
 
 To make this environment take hold, you will need to close and reopen your terminal.
 Then you can go into any of the Lesson directories and build the code just as you
-have seen it in the videos.
+have seen it in the videos. **Please note** that if you already had the release
+build of cc65 installed that it will not work with the build scripts here, as
+they do not have X16 support built in. You will need to build the latest commit
+yourself. When you do this, make sure that you uninstall the release build of
+cc65 or at least remove it from your PATH. You should verify that the correct
+version is going to run with this simple command:
+
+```
+which cl65
+```
+
+If this does not print out the location of the version you just built, you need
+to get your PATH in the correct order.
 
 # Installing the Commander X16 Emulator
 
@@ -163,7 +179,12 @@ Or, you can build the emulator and the ROM image yourself from the GitHub repos:
 - https://github.com/commanderx16/x16-rom
 
 If you followed the instructions above to build and install gcc and cc65, you are all
-set to build both of those repos already.
+set to build both of those repos already. **Please note** that building the Windows emulator
+using Cygwin is not recommended, and at the very least requires additional
+environmental setup. It is *highly* recommended to use the release build of the
+Windows emulator or to use the cross-platform build environment on a Mac if you
+absolutely need a custom build. Using
+mingw32/64 on Linux has not been done successfully, either.
 
 For convenience, I recommend putting the emulator directory on your path to make your
 workflow exactly as seen in these videos.

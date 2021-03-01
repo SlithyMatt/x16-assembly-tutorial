@@ -115,10 +115,12 @@ start:
    bra @loop
 @quit:
    ; restore default IRQ vector
+   sei
    lda default_irq_vector
    sta IRQVec
    lda default_irq_vector+1
    sta IRQVec+1
+   cli
    rts
 
 custom_irq_handler:
