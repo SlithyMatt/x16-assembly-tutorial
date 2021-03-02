@@ -320,22 +320,10 @@ print_result:
 
 multiply:
    jsr flush_chrin
-   bit op2+1
-   bmi @op2_negative
    lda op2
    sta result
    lda op2+1
    sta result+1
-   bra @pad_result
-@op2_negative:
-   lda #0
-   sec
-   sbc op2
-   sta result
-   lda #0
-   sbc op2+1
-   sta result+1
-@pad_result:
    stz result+2
    stz result+3
    stz offset
@@ -347,7 +335,6 @@ multiply:
    lda op1+1
    sta temp_word+1
    beq @op1_byte
-   bmi @op1_negative
 @set_op1_word_exp:
    ldy #15
    asl temp_word+1
@@ -365,15 +352,6 @@ multiply:
    dex
    bne @op1_word_remainder_loop
    bra @shift
-@op1_negative:
-   lda #0
-   sec
-   sbc op1
-   sta temp_word
-   lda #0
-   sbc op1+1
-   sta temp_word+1
-   bne @set_op1_word_exp
 @op1_byte:
    lda temp_word
    bne @set_op1_byte_exp
@@ -434,28 +412,6 @@ multiply:
    cpx #4
    bne @add_result
    plp
-@set_sign:
-   bit op1+1
-   bmi @check_op2_sign
-   bit op2+1
-   bmi @negative_result ; only op2 negative
-   bra @return ; both op1 and op2 positive
-@check_op2_sign: ; op1 negative
-   bit op2+1
-   bmi @return ; both op1 and op2 negative
-@negative_result:
-   ldx #0
-   sec
-   php
-@negate:
-   plp
-   lda #0
-   sbc result,x
-   sta result,x
-   php
-   inx
-   cpx #4
-   bne @negate
 @return:
    lda #RETURN
    jsr CHROUT
