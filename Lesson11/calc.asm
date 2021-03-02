@@ -291,6 +291,7 @@ print_result:
    lda bcd,y
    bne @check_upper
    dey
+   beq @zero
    bra @trim_lead
 @check_upper:
    bit #$F0
@@ -313,6 +314,9 @@ print_result:
    bmi @return
    lda bcd,y
    bra @print_upper
+@zero:
+   lda #CHAR_0
+   jsr CHROUT
 @return:
    lda #RETURN
    jsr CHROUT
@@ -358,7 +362,7 @@ multiply:
    stz result
    stz result+1
    jmp @return ; op1 = 0, result = zero
-@set_op1_byte_exp
+@set_op1_byte_exp:
    ldy #8
 @op1_byte_exp_loop:
    dey
@@ -374,8 +378,9 @@ multiply:
    dex
    bne @op1_byte_remainder_loop
 @shift: ; Y = op1 exponent, temp_word = remainder
-   dey
+   cpy #0
    beq @remainder
+   dey
    lsr temp_word+1
    ror temp_word
    bcc @shift_result
