@@ -8,7 +8,6 @@
 
 ; Zero Page
 STR_PTR           = $30
-NUM_PTR           = $32
 
 ; Kernal
 CHRIN             = $FFCF
@@ -33,7 +32,6 @@ CHAR_9            = $39
    pla
 .endmacro
 
-.
 
 ; globals
 op1: .word 0
@@ -44,6 +42,7 @@ op_binary: .word 0
 bcd: .res 5
 operator: .byte 0
 result: .dword 0
+temp_word: .word 0
 
 ; prompts
 op1_prompt:       .asciiz "enter 1st operand: "
@@ -56,8 +55,43 @@ sym_error_prompt: .asciiz "must be +,-,/,*:   "
 start:
    PRINT_STRING op1_prompt
    jsr get_operand
-
-
+   lda op_binary
+   sta op1
+   lda op_binary+1
+   sta op1+1
+   PRINT_STRING op2_prompt
+   jsr get_operand
+   lda op_binary
+   sta op2
+   lda op_binary+1
+   sta op2+1
+   PRINT_STRING operator_prompt
+@get_operator:
+   jsr CHRIN
+   cmp #PLUS
+   beq @add
+   cmp #HYPHEN
+   beq @subtract
+   cmp #ASTERIX
+   beq @multiply
+   cmp #SLASH
+   beq @divide
+   jsr flush_chrin
+   PRINT_STRING sym_error_prompt
+   bra @get_operator
+@add:
+   jsr add
+   bra @done
+@subtract:
+   jsr subtract
+   bra @done
+@multiply:
+   jsr multiply
+   bra @done
+@divide:
+   jsr divide
+@done:
+   jsr print_result
    rts
 
 print_str: ; STR_PTR = address of null-terminated string
@@ -73,85 +107,218 @@ print_str: ; STR_PTR = address of null-terminated string
    ply
    rts
 
+flush_chrin:
+   jsr CHRIN
+   cmp #RETURN
+   bne flush_chrin
+   rts
+
 get_operand:
    pha
+   phx
    phy
-   lda #<op_string
-   sta STR_PTR
-   lda #>op_string
-   sta STR_PTR+1
-   ldy #0
+   ldx #0
 @input_loop:
-   phy
    jsr CHRIN
-   ply
-   cmp #0
+   cmp #RETURN
    beq @input_done
-   sta (STR_PTR),y
-   iny
-   cpy #5
+   sta op_string,x
+   inx
+   cpx #5
    bne @input_loop
-@flush:
-   jsr CHRIN
-   cmp #0
-   bne @flush
-@input_done: ; A = 0, y <= 5
-   sta (STR_PTR),y ; null termination
+   jsr flush_chrin
+@input_done: ; A = RETURN
+   jsr CHROUT
+   stz op_string,x ; null termination
    ; check for number
-   ldy #0
+   ldx #0
 @check_loop:
-   lda (STR_PTR),y
+   lda op_string,x
    cmp #0
    beq @check_empty
    cmp #CHAR_0
    bmi @error
    cmp #(CHAR_9 + 1)
    bpl @error
-   iny
+   inx
    bra @check_loop
-@check_empty
-   cpy #0
+@check_empty:
+   cpx #0
    bne @convert
 @error:
    PRINT_STRING num_error_prompt
    jmp @input_loop
 @convert:
-   ; find end of string
-   ldy #1
-@end_loop:
-   lda (STR_PTR),y
-   iny
-   cmp #0
-   bne @end_loop
-   dey
-   dey ; y = last number character index
    ldx #0
-   lda #<op_binary
-   sta NUM_PTR
-   lda #>op_binary
-   sta NUM_PTR+1
+   stz op_binary
+   stz op_binary+1
 @conv_loop:
-   lda (STR_PTR),y
-   and #$0F
-   sta NUM_PTR,x
-   cpy #0
-   beq @fill
-   dey
-   lda (STR_PTR),y
-   asl
-   asl
-   asl
-   asl
-   ora NUM_PTR,x
-   sta NUM_PTR,x
-   cpy #0
-   beq @fill
-   dey
+   lda op_string,x
+   beq @done
+   ; new digit, multiply op_binary by 10
+   asl op_binary
+   rol op_binary+1
+   lda op_binary
+   ; multiplied by 2 - save value in temp variable
+   sta temp_word
+   lda op_binary+1
+   sta temp_word+1
+   ; continue shifting two more bits to multiply by 8
+   asl op_binary
+   rol op_binary+1
+   asl op_binary
+   rol op_binary+1
+   ; now add x2 value to x8 value to get x10 value
+   lda op_binary
+   clc
+   adc temp_word
+   sta op_binary
+   lda op_binary+1
+   adc temp_word+1
+   sta op_binary+1
+   ; now add digit from string
+   lda op_string,x
+   and #$0F ; zero out upper nybble to get digit numerical value
+   clc
+   adc op_binary
+   sta op_binary
+   lda op_binary+1
+   adc #0 ; let carry happen, if necessary
+   sta op_binary+1
    inx
    bra @conv_loop
-@fill:
-
 @done:
    ply
+   plx
    pla
+   rts
+
+add:
+   jsr flush_chrin
+   stz result+2
+   stz result+3
+   lda op1
+   clc
+   adc op2
+   sta result
+   lda op1+1
+   adc op2+1
+   sta result+1
+   rol result+2
+   rts
+
+subtract:
+   jsr flush_chrin
+   lda op1
+   sec
+   sbc op2
+   sta result
+   lda op1+1
+   sbc op2+1
+   sta result+1
+   bmi @negative
+   stz result+2
+   stz result+3
+   bra @return
+@negative:
+   lda #$FF
+   sta result+2
+   sta result+3
+@return:
+   rts
+
+print_result:
+   lda #RETURN
+   jsr CHROUT
+   PRINT_STRING result_prompt
+   ; intialize BCD number to zero
+   stz bcd
+   stz bcd+1
+   stz bcd+2
+   stz bcd+3
+   stz bcd+4
+   ; check for negative
+   bit result+3
+   bpl @convert
+   ; subtract from zero to get negated value
+   lda #0
+   sec
+   sbc result
+   sta result
+   lda #0
+   sbc result+1
+   sta result+1
+   lda #0
+   sbc result+2
+   sta result+2
+   lda #0
+   sbc result+3
+   sta result+3
+   lda #HYPHEN
+   jsr CHROUT
+@convert:
+   ; convert 32-bit result to 10-digit BCD
+   sed
+   ldx #32
+@main_loop:
+   ; shift highest bit to C
+   asl result
+   rol result+1
+   rol result+2
+   rol result+3
+   ldy #0
+   ; BCD = BCD*2 + C
+   php
+@add_loop:
+   plp
+   lda bcd,y
+   adc bcd,y
+   sta bcd,y
+   php
+   iny
+   cpy #5
+   bne @add_loop
+   plp
+   dex
+   bne @main_loop
+   cld
+   ; print BCD as PETSCII string
+   ldy #4
+@trim_lead:
+   lda bcd,y
+   bne @check_upper
+   dey
+   bra @trim_lead
+@check_upper:
+   bit #$F0
+   beq @print_lower
+@print_upper:
+   pha
+   lsr
+   lsr
+   lsr
+   lsr
+   ora #CHAR_0
+   jsr CHROUT
+   pla
+@print_lower:
+   and #$0F
+   ora #CHAR_0
+   jsr CHROUT
+@print_rest:
+   dey
+   bmi @return
+   lda bcd,y
+   bra @print_upper
+@return:
+   lda #RETURN
+   jsr CHROUT
+   rts
+
+multiply:
+   jsr flush_chrin
+   rts
+
+divide:
+   jsr flush_chrin
    rts
