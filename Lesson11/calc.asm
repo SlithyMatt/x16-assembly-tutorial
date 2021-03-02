@@ -42,7 +42,9 @@ op_binary: .word 0
 bcd: .res 5
 operator: .byte 0
 result: .dword 0
+offset: .dword 0
 temp_word: .word 0
+temp_byte: .byte 0
 
 ; prompts
 op1_prompt:       .asciiz "enter 1st operand: "
@@ -51,6 +53,7 @@ operator_prompt:  .asciiz "enter operator:    "
 result_prompt:    .asciiz "result is:         "
 num_error_prompt: .asciiz "must be a number:  "
 sym_error_prompt: .asciiz "must be +,-,/,*:   "
+div0_error:       .asciiz "error: divide by zero"
 
 start:
    PRINT_STRING op1_prompt
@@ -317,8 +320,165 @@ print_result:
 
 multiply:
    jsr flush_chrin
+   bit op2+1
+   bmi @op2_negative
+   lda op2
+   sta result
+   lda op2+1
+   sta result+1
+   bra @pad_result
+@op2_negative:
+   lda #0
+   sec
+   sbc op2
+   sta result
+   lda #0
+   sbc op2+1
+   sta result+1
+@pad_result:
+   stz result+2
+   stz result+3
+   stz offset
+   stz offset+1
+   stz offset+2
+   stz offset+3
+   lda op1
+   sta temp_word
+   lda op1+1
+   sta temp_word+1
+   beq @op1_byte
+   bmi @op1_negative
+@set_op1_word_exp:
+   ldy #15
+   asl temp_word+1
+@op1_word_exp_loop:
+   dey
+   asl temp_word+1
+   bcc @op1_word_exp_loop
+   sty temp_byte
+   lda #16
+   sec
+   sbc temp_byte
+   tax
+@op1_word_remainder_loop:
+   lsr temp_word+1
+   dex
+   bne @op1_word_remainder_loop
+   bra @shift
+@op1_negative:
+   lda #0
+   sec
+   sbc op1
+   sta temp_word
+   lda #0
+   sbc op1+1
+   sta temp_word+1
+   bne @set_op1_word_exp
+@op1_byte:
+   lda temp_word
+   bne @set_op1_byte_exp
+   stz result
+   stz result+1
+   jmp @return ; op1 = 0, result = zero
+@set_op1_byte_exp
+   ldy #8
+@op1_byte_exp_loop:
+   dey
+   asl temp_word
+   bcc @op1_byte_exp_loop
+   sty temp_byte
+   lda #8
+   sec
+   sbc temp_byte
+   tax
+@op1_byte_remainder_loop:
+   lsr temp_word
+   dex
+   bne @op1_byte_remainder_loop
+@shift: ; Y = op1 exponent, temp_word = remainder
+   dey
+   beq @remainder
+   lsr temp_word+1
+   ror temp_word
+   bcc @shift_result
+   ldx #0
+   clc
+   php
+@add_offset:
+   plp
+   lda offset,x
+   adc result,x
+   sta offset,x
+   php
+   inx
+   cpx #4
+   bne @add_offset
+   plp
+@shift_result:
+   asl result
+   rol result+1
+   rol result+2
+   rol result+3
+   bra @shift
+@remainder:
+   ldx #0
+   clc
+   php
+@add_result:
+   plp
+   lda result,x
+   adc offset,x
+   sta result,x
+   php
+   inx
+   cpx #4
+   bne @add_result
+   plp
+@set_sign:
+   bit op1+1
+   bmi @check_op2_sign
+   bit op2+1
+   bmi @negative_result ; only op2 negative
+   bra @return ; both op1 and op2 positive
+@check_op2_sign: ; op1 negative
+   bit op2+1
+   bmi @return ; both op1 and op2 negative
+@negative_result:
+   ldx #0
+   sec
+   php
+@negate:
+   plp
+   lda #0
+   sbc result,x
+   sta result,x
+   php
+   inx
+   cpx #4
+   bne @negate
+@return:
+   lda #RETURN
+   jsr CHROUT
    rts
 
 divide:
    jsr flush_chrin
+   lda op2
+   bne @valid
+   lda op2+1
+   bne @valid
+   ; divide by zero: set result to 0 and print error
+   stz result
+   stz result+1
+   stz result+2
+   stz result+3
+   lda #RETURN
+   jsr CHROUT
+   PRINT_STRING div0_error
+   jmp @return
+@valid:
+   ; TBD
+@return:
+   lda #RETURN
+   jsr CHROUT
    rts
