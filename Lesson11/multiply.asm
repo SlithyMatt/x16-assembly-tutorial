@@ -28,7 +28,6 @@ start:
    rts
 
 multiply:
-   jsr flush_chrin
    lda op2
    sta result
    lda op2+1
@@ -128,35 +127,12 @@ multiply:
    rts
 
 print_result:
-   lda #RETURN
-   jsr CHROUT
-   PRINT_STRING result_prompt
    ; intialize BCD number to zero
    stz bcd
    stz bcd+1
    stz bcd+2
    stz bcd+3
    stz bcd+4
-   ; check for negative
-   bit result+3
-   bpl @convert
-   ; subtract from zero to get negated value
-   lda #0
-   sec
-   sbc result
-   sta result
-   lda #0
-   sbc result+1
-   sta result+1
-   lda #0
-   sbc result+2
-   sta result+2
-   lda #0
-   sbc result+3
-   sta result+3
-   lda #HYPHEN
-   jsr CHROUT
-@convert:
    ; convert 32-bit result to 10-digit BCD
    sed
    ldx #32
