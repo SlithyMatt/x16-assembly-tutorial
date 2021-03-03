@@ -291,8 +291,8 @@ print_result:
    lda bcd,y
    bne @check_upper
    dey
-   beq @zero
-   bra @trim_lead
+   bne @trim_lead
+   lda bcd,y
 @check_upper:
    bit #$F0
    beq @print_lower
@@ -314,9 +314,6 @@ print_result:
    bmi @return
    lda bcd,y
    bra @print_upper
-@zero:
-   lda #CHAR_0
-   jsr CHROUT
 @return:
    lda #RETURN
    jsr CHROUT
@@ -422,8 +419,12 @@ multiply:
    jsr CHROUT
    rts
 
-divide:
+divide: ; output: result = quotient, offset = remainder
    jsr flush_chrin
+   stz result+2
+   stz result+3
+   stz offset
+   stz offset+1
    lda op2
    bne @valid
    lda op2+1
@@ -431,15 +432,41 @@ divide:
    ; divide by zero: set result to 0 and print error
    stz result
    stz result+1
-   stz result+2
-   stz result+3
    lda #RETURN
    jsr CHROUT
    PRINT_STRING div0_error
    jmp @return
 @valid:
-   ; TBD
+   ; copy op1 (dividend) to result
+   lda op1
+   sta result
+   lda op1+1
+   sta result+1
+   ; copy op2 (divisor) to temp_word
+   lda op2
+   sta temp_word
+   lda op2+1
+   sta temp_word+1
+   ; shift dividend out of result, replacing with quotient
+   ldx #16
+@shift:
+   ; shift result left into offset
+   asl result     ; make room for quotient
+   rol result+1   ; top bit of result (dividend) shifted to C
+   rol offset     ; C shifted into bottom bit of offset (remainder)
+   rol offset+1
+   lda offset
+   sec            ; try subtracting temp_word (divisor) from offset (remainder)
+   sbc temp_word
+   tay            ; y = low byte difference
+   lda offset+1
+   sbc temp_word+1
+   bcc @next_shift ; if C cleared, subtraction failed, do next shift
+   sta offset+1    ; C still set, save difference in offset (remainder)
+   sty offset
+   inc result     ; finally, set a bit in result (quotient)
+@next_shift:
+   dex
+   bne @shift
 @return:
-   lda #RETURN
-   jsr CHROUT
    rts
