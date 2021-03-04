@@ -442,11 +442,6 @@ divide: ; output: result = quotient, offset = remainder
    sta result
    lda op1+1
    sta result+1
-   ; copy op2 (divisor) to temp_word
-   lda op2
-   sta temp_word
-   lda op2+1
-   sta temp_word+1
    ; shift dividend out of result, replacing with quotient
    ldx #16
 @shift:
@@ -456,11 +451,11 @@ divide: ; output: result = quotient, offset = remainder
    rol offset     ; C shifted into bottom bit of offset (remainder)
    rol offset+1
    lda offset
-   sec            ; try subtracting temp_word (divisor) from offset (remainder)
-   sbc temp_word
+   sec            ; try subtracting op2 (divisor) from offset (remainder)
+   sbc op2
    tay            ; y = low byte difference
    lda offset+1
-   sbc temp_word+1
+   sbc op2+1
    bcc @next_shift ; if C cleared, subtraction failed, do next shift
    sta offset+1    ; C still set, save difference in offset (remainder)
    sty offset
