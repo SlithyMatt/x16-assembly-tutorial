@@ -186,6 +186,4 @@ print_result:
    lda bcd,y
    bra @print_upper
 @return:
-   lda #RETURN
-   jsr CHROUT
    rts
