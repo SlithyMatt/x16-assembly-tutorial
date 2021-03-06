@@ -336,9 +336,7 @@ multiply:
    lda op1+1
    sta temp_word+1
    beq @op1_byte
-@set_op1_word_exp:
-   ldy #15
-   asl temp_word+1
+   ldy #16
 @op1_word_exp_loop:
    dey
    asl temp_word+1
