@@ -45,6 +45,7 @@ result: .dword 0
 offset: .dword 0
 temp_word: .word 0
 temp_byte: .byte 0
+not_divide: .byte 1
 
 ; prompts
 op1_prompt:       .asciiz "enter 1st operand: "
@@ -54,8 +55,11 @@ result_prompt:    .asciiz "result is:         "
 num_error_prompt: .asciiz "must be a number:  "
 sym_error_prompt: .asciiz "must be +,-,/,*:   "
 div0_error:       .asciiz "error: divide by zero"
+remainder_prompt: .asciiz "remainder:         "
 
 start:
+   lda #1
+   sta not_divide
    PRINT_STRING op1_prompt
    jsr get_operand
    lda op_binary
@@ -80,6 +84,7 @@ start:
    cmp #SLASH
    beq @divide
    jsr flush_chrin
+   jsr CHROUT
    PRINT_STRING sym_error_prompt
    bra @get_operator
 @add:
@@ -93,8 +98,18 @@ start:
    bra @done
 @divide:
    jsr divide
+   stz not_divide
 @done:
    jsr print_result
+   lda not_divide
+   bne @return
+   PRINT_STRING remainder_prompt
+   lda offset
+   sta result
+   lda offset+1
+   sta result+1
+   jsr print_result
+@return:
    rts
 
 print_str: ; STR_PTR = address of null-terminated string
