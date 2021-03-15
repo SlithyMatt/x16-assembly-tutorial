@@ -9,21 +9,36 @@
 ; Zero Page
 ZP_PTR            = $30
 
+; RAM Interrupt Vectors
+IRQVec            = $0314
+
 ; VERA
 VERA_addr_low     = $9F20
 VERA_addr_high    = $9F21
 VERA_addr_bank    = $9F22
 VERA_data0        = $9F23
 VERA_ctrl         = $9F25
+VERA_ien          = $9F26
+VERA_isr          = $9F27
+VSYNC_BIT         = $01
 VERA_dc_video     = $9F29
 VERA_dc_hscale    = $9F2A
 VERA_dc_vscale    = $9F2B
+DISPLAY_SCALE     = 32 ; 4X zoom
 VERA_L0_config    = $9F2D
 VERA_L0_mapbase   = $9F2E
 VERA_L0_tilebase  = $9F2F
+VERA_L0_hscroll_l = $9F30
+VERA_L0_hscroll_h = $9F31
+VERA_L0_vscroll_l = $9F32
+VERA_L0_vscroll_h = $9F33
 VERA_L1_config    = $9F34
 VERA_L1_mapbase   = $9F35
 VERA_L1_tilebase  = $9F36
+VERA_L1_hscroll_l = $9F37
+VERA_L1_hscroll_h = $9F38
+VERA_L1_vscroll_l = $9F39
+VERA_L1_vscroll_h = $9F3A
 
 ; VRAM Addresses
 VRAM_layer0_map   = $00000
@@ -32,7 +47,7 @@ VRAM_tiles        = $00600
 
 ; globals:
 start_vram:
-sky: ; 32 x 16 (only populating first 8 rows)
+sky: ; 32 x 32 (only populating first 8 rows)
 .byte $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00
 .byte $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00
 .byte $01,$00, $01,$00, $01,$00, $02,$00, $03,$00, $04,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $02,$00, $03,$00, $04,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $02,$00, $03,$00, $04,$00, $01,$00, $01,$00
@@ -42,7 +57,7 @@ sky: ; 32 x 16 (only populating first 8 rows)
 .byte $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00
 .byte $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00
 
-ground: ; 32 x 16
+ground: ; 32 x 32 (only populating first 15 rows)
 .byte $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00
 .byte $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00
 .byte $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00
@@ -51,7 +66,6 @@ ground: ; 32 x 16
 .byte $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00
 .byte $08,$00, $08,$04, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $08,$00, $08,$04, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $08,$00, $08,$04, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $00,$00, $08,$00, $08,$04, $00,$00, $00,$00, $00,$00
 .byte $09,$00, $09,$04, $07,$00, $07,$00, $07,$00, $07,$00, $07,$00, $07,$00, $07,$00, $09,$00, $09,$04, $07,$00, $07,$00, $07,$00, $07,$00, $07,$00, $07,$00, $07,$00, $09,$00, $09,$04, $07,$00, $07,$00, $07,$00, $07,$00, $07,$00, $07,$00, $07,$00, $09,$00, $09,$04, $07,$00, $07,$00, $07,$00
-.byte $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00
 .byte $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00
 .byte $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00
 .byte $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00
@@ -163,9 +177,133 @@ tiles:
 
 end_vram: .word end_vram-start_vram
 
+default_irq_vector: .addr 0
+
 sky_move: .byte 0
+SKY_DELAY = 3
 
 start:
+   stz VERA_dc_video ; disable display
+
+   ; scale display to 4x zoom (160x120)
+   lda #DISPLAY_SCALE
+   sta VERA_dc_hscale
+   sta VERA_dc_vscale
+
+   ; configure layer 0: sky
+   lda #$02 ; 32x32 4bpp tiles
+   sta VERA_L0_config
+   lda #(VRAM_layer0_map >> 9)
+   sta VERA_L0_mapbase
+   lda #(VRAM_tiles >> 9) ; 8x8 tiles
+   sta VERA_L0_tilebase
+   stz VERA_L0_hscroll_l ; horizontal scroll = 0
+   stz VERA_L0_hscroll_h
+   stz VERA_L0_hscroll_l ; vertical scroll = 0
+   stz VERA_L0_hscroll_h
+
+   ; configure layer 1: ground
+   lda #$02 ; 32x32 4bpp tiles
+   sta VERA_L1_config
+   lda #(VRAM_layer1_map >> 9)
+   sta VERA_L1_mapbase
+   lda #(VRAM_tiles >> 9) ; 8x8 tiles
+   sta VERA_L1_tilebase
+   stz VERA_L1_hscroll_l ; horizontal scroll = 0
+   stz VERA_L1_hscroll_h
+   stz VERA_L1_hscroll_l ; vertical scroll = 0
+   stz VERA_L1_hscroll_h
+
+   ; copy video data to VRAM, from beginning
+   stz VERA_ctrl ; data port 0
+   lda #$10 ; stride = 1
+   sta VERA_addr_bank
+   stz VERA_addr_high
+   stz VERA_addr_low
+   lda #<start_vram ; ZP pointer = start of video data in CPU RAM
+   sta ZP_PTR
+   lda #>start_vram
+   sta ZP_PTR+1
+   ldx #0
+   ldy #0
+@vram_loop:
+   lda (ZP_PTR),y
+   sta VERA_data0
+   iny
+   cpx end_vram+1 ; last page yet?
+   beq @check_end
+   cpy #0
+   bne @vram_loop ; not on last page, Y non-zero
+   inx ; next page
+   inc ZP_PTR+1
+   bra @vram_loop
+@check_end:
+   cpy end_vram ; last byte of last page?
+   bne @vram_loop ; last page, before last byte
+
+   ; enable display, both layers
+   lda #$31
+   sta VERA_dc_video
+
+   ; initialize parallax counter
+   lda #SKY_DELAY
+   sta sky_move
+
+   ; backup default RAM IRQ vector
+   lda IRQVec
+   sta default_irq_vector
+   lda IRQVec+1
+   sta default_irq_vector+1
+
+   ; overwrite RAM IRQ vector with custom handler address
+   sei ; disable IRQ while vector is changing
+   lda #<custom_irq_handler
+   sta IRQVec
+   lda #>custom_irq_handler
+   sta IRQVec+1
+   lda #VSYNC_BIT ; make VERA only generate VSYNC IRQs
+   sta VERA_ien
+   cli ; enable IRQ now that vector is properly set
+
+@main_loop
+   wai
+   ; do nothing in main loop, just let ISR do everything
+   bra @main_loop
+   ; never return, just wait for reset
 
 
-   rts
+custom_irq_handler:
+   lda VERA_isr
+   and #VSYNC_BIT
+   beq @continue ; non-VSYNC IRQ, no tick update
+
+   ; scroll ground (layer 1) to the left one pixel
+   lda VERA_L1_hscroll_l
+   sec
+   sbc #1
+   sta VERA_L1_hscroll_l
+   lda VERA_L1_hscroll_h
+   sbc #0
+   sta VERA_L1_hscroll_h
+
+   ; handle parallax delay
+   dec sky_move
+   bne @continue ; sky_move non-zero, don't scroll sky
+
+   ; scroll sky (layer 0) to the left one pixel
+   lda VERA_L0_hscroll_l
+   sec
+   sbc #1
+   sta VERA_L0_hscroll_l
+   lda VERA_L0_hscroll_h
+   sbc #0
+   sta VERA_L0_hscroll_h
+
+   ; reset parallax counter
+   lda #SKY_DELAY
+   sta sky_move
+
+@continue:
+   ; continue to default IRQ handler
+   jmp (default_irq_vector)
+   ; RTI will happen after jump
