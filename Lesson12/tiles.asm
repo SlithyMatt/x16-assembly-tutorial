@@ -43,10 +43,9 @@ VERA_L1_vscroll_h = $9F3A
 ; VRAM Addresses
 VRAM_layer0_map   = $00000
 VRAM_layer1_map   = $00200
-VRAM_tiles        = $00600
+VRAM_tiles        = $00800
 
 ; globals:
-start_vram:
 sky: ; 32 x 32 (only populating first 8 rows)
 .byte $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00
 .byte $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00, $01,$00
@@ -73,6 +72,9 @@ ground: ; 32 x 32 (only populating first 15 rows)
 .byte $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00
 .byte $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00
 .byte $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00, $06,$00
+
+end_maps:
+MAPS_SIZE = end_maps-sky
 
 tiles:
       ; Tile 0
@@ -175,7 +177,44 @@ tiles:
 .byte $55,$55,$55,$99
 .byte $55,$55,$59,$95
 
-end_vram: .word end_vram-start_vram
+end_tiles:
+TILES_SIZE = end_tiles-tiles
+
+.macro RAM2VRAM ram_addr, vram_addr, num_bytes
+   .scope
+      ; set data port 0 to start writing to VRAM address
+      stz VERA_ctrl
+      lda #($10 | ^vram_addr) ; stride = 1
+      sta VERA_addr_bank
+      lda #>vram_addr
+      sta VERA_addr_high
+      lda #<vram_addr
+      sta VERA_addr_low
+       ; ZP pointer = start of video data in CPU RAM
+      lda #<ram_addr
+      sta ZP_PTR
+      lda #>ram_addr
+      sta ZP_PTR+1
+      ; use index pointers to compare with number of bytes to copy
+      ldx #0
+      ldy #0
+   vram_loop:
+      lda (ZP_PTR),y
+      sta VERA_data0
+      iny
+      cpx #>num_bytes ; last page yet?
+      beq check_end
+      cpy #0
+      bne vram_loop ; not on last page, Y non-zero
+      inx ; next page
+      inc ZP_PTR+1
+      bra vram_loop
+   check_end:
+      cpy #<num_bytes ; last byte of last page?
+      bne vram_loop ; last page, before last byte
+   .endscope
+.endmacro
+
 
 default_irq_vector: .addr 0
 
@@ -214,32 +253,10 @@ start:
    stz VERA_L1_hscroll_l ; vertical scroll = 0
    stz VERA_L1_hscroll_h
 
-   ; copy video data to VRAM, from beginning
-   stz VERA_ctrl ; data port 0
-   lda #$10 ; stride = 1
-   sta VERA_addr_bank
-   stz VERA_addr_high
-   stz VERA_addr_low
-   lda #<start_vram ; ZP pointer = start of video data in CPU RAM
-   sta ZP_PTR
-   lda #>start_vram
-   sta ZP_PTR+1
-   ldx #0
-   ldy #0
-@vram_loop:
-   lda (ZP_PTR),y
-   sta VERA_data0
-   iny
-   cpx end_vram+1 ; last page yet?
-   beq @check_end
-   cpy #0
-   bne @vram_loop ; not on last page, Y non-zero
-   inx ; next page
-   inc ZP_PTR+1
-   bra @vram_loop
-@check_end:
-   cpy end_vram ; last byte of last page?
-   bne @vram_loop ; last page, before last byte
+   ; copy tile maps to VRAM
+   RAM2VRAM sky, VRAM_layer0_map, MAPS_SIZE
+   ; copy tiles to VRAM
+   RAM2VRAM tiles, VRAM_tiles, TILES_SIZE
 
    ; enable display, both layers
    lda #$31
@@ -265,7 +282,7 @@ start:
    sta VERA_ien
    cli ; enable IRQ now that vector is properly set
 
-@main_loop
+@main_loop:
    wai
    ; do nothing in main loop, just let ISR do everything
    bra @main_loop
@@ -279,11 +296,11 @@ custom_irq_handler:
 
    ; scroll ground (layer 1) to the left one pixel
    lda VERA_L1_hscroll_l
-   sec
-   sbc #1
+   clc
+   adc #1
    sta VERA_L1_hscroll_l
    lda VERA_L1_hscroll_h
-   sbc #0
+   adc #0
    sta VERA_L1_hscroll_h
 
    ; handle parallax delay
@@ -292,11 +309,11 @@ custom_irq_handler:
 
    ; scroll sky (layer 0) to the left one pixel
    lda VERA_L0_hscroll_l
-   sec
-   sbc #1
+   clc
+   adc #1
    sta VERA_L0_hscroll_l
    lda VERA_L0_hscroll_h
-   sbc #0
+   adc #0
    sta VERA_L0_hscroll_h
 
    ; reset parallax counter
