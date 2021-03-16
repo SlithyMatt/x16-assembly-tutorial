@@ -219,7 +219,7 @@ TILES_SIZE = end_tiles-tiles
 default_irq_vector: .addr 0
 
 sky_move: .byte 0
-SKY_DELAY = 3
+SKY_DELAY = 2
 
 start:
    stz VERA_dc_video ; disable display
