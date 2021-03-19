@@ -14,6 +14,9 @@ now are the following lessons:
 - Lesson 8: Meet the Kernal
 - Lesson 9: Hello, VERA!
 - Lesson 10: Interrupts
+- Lesson 11: Advanced Math
+- Lesson 12: Tiles
+- Lesson 13: PSG Sound
 
 More to come!
 
