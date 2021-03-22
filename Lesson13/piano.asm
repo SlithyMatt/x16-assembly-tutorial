@@ -29,37 +29,32 @@ DISPLAY_SCALE     = 64 ; 2X zoom
 CHROUT            = $FFD2
 GETIN             = $FFE4
 
-
 ; VRAM Addresses
 CONTROLS_VRAM     = $00200
 NUM_LABELS_VRAM   = CONTROLS_VRAM + $0207
 KEYS_VRAM         = $00C00
 VRAM_psg          = $1F9C0
-PULSE_CHAN_VRAM   = VRAM_psg
-ST_CHAN_VRAM      = VRAM_psg+4
-TRI_CHAN_VRAM     = VRAM_psg+8
-NOISE_CHAN_VRAM   = VRAM_psg+12
 
 ; --- PSG Values ---
 ; Frequencies:
-C4                = 702
-Db4               = 744
-D4                = 788
-Eb4               = 835
-E4                = 885
-F4                = 937
-Gb4               = 993
-G4                = 1052
-Ab4               = 1115
-A4                = 1181
-Bb4               = 1251
-B4                = 1326
-C5                = 1405
+C4                = 702    ; 261.5 Hz
+Db4               = 744    ; 277.2 Hz
+D4                = 788    ; 293.6 Hz
+Eb4               = 835    ; 311.1 Hz
+E4                = 885    ; 329.7 Hz
+F4                = 937    ; 349.1 Hz
+Gb4               = 993    ; 369.9 Hz
+G4                = 1052   ; 391.9 Hz
+Ab4               = 1115   ; 415.4 Hz
+A4                = 1181   ; 440.0 Hz
+Bb4               = 1251   ; 466.0 Hz
+B4                = 1326   ; 494.0 Hz
+C5                = 1405   ; 523.4 Hz
 ; RL-Volume:
 CHANNEL_ON        = $FF ; L&R, max volume
 CHANNEL_OFF       = $00
 ; Waveform:
-PULSE             = $3F
+PULSE             = $3F    ; Pulse Width = 50%
 SAWTOOTH          = $7F
 TRIANGLE          = $BF
 NOISE             = $FF
@@ -70,6 +65,8 @@ CHAR_1            = $31
 CHAR_Z            = $5A
 CLR               = $93
 LEFT_CURSOR       = $9D
+
+; VRAM staging on RAM
 
 .macro RAM2VRAM ram_addr, vram_addr, num_bytes, color
    .scope
@@ -92,7 +89,7 @@ LEFT_CURSOR       = $9D
    vram_loop:
       lda (ZP_PTR),y
       sta VERA_data0
-      lda #color
+      lda #color  ; fill in second byte with specified color
       sta VERA_data0
       iny
       cpx #>num_bytes ; last page yet?
@@ -153,7 +150,7 @@ end_keys:
 KEYS_SIZE = end_keys-keys
 KEYS_COLOR = $10 ; black on white
 
-
+; Global Variables
 default_irq_vector: .addr 0
 current_key: .byte 0
 previous_key: .byte 0
@@ -286,14 +283,14 @@ start:
    jsr CHROUT
 
 main_loop:
-   wai
+   wai ; wait for next IRQ
    lda current_key
-   beq stop
+   beq stop ; current key is NULL
    cmp #(CHAR_Z + 1)
-   bpl stop
+   bpl stop ; current key code > 'Z'
    sec
-   sbc #COMMA
-   bcc stop
+   sbc #COMMA ; key offset = code - ','
+   bcc stop ; current key code < ','
    asl
    asl
    tax ; X = key offset * 4
@@ -313,7 +310,7 @@ stop:
 
 stop_subroutine:
    stz VERA_ctrl
-   lda #($30 | ^VRAM_psg) ; stride = 4
+   lda #($30 | ^VRAM_psg) ; stride = 4 (set one byte per channel)
    sta VERA_addr_bank
    lda #>VRAM_psg
    sta VERA_addr_high
@@ -354,6 +351,7 @@ set_freq:
    sta VERA_addr_high
    lda #<VRAM_psg
    sta VERA_addr_low
+   ; play frequency on each enabled channel based on flag
    SET_FREQ_CHANNEL pulse_on
    SET_FREQ_CHANNEL sawtooth_on
    SET_FREQ_CHANNEL triangle_on
@@ -376,7 +374,7 @@ set_wf:
 
 .macro HIGHLIGHT_WF flag
    .scope
-      bit flag
+      bit flag ; highlight if flag & $80
       bpl clear
       lda #HIGHLIGHT_COLOR
       bra set
@@ -389,12 +387,13 @@ set_wf:
 
 highlight_wfs:
    stz VERA_ctrl
-   lda #($50 | ^NUM_LABELS_VRAM) ; stride = 16
+   lda #($50 | ^NUM_LABELS_VRAM) ; stride = 16 (set every 8th color)
    sta VERA_addr_bank
    lda #>NUM_LABELS_VRAM
    sta VERA_addr_high
    lda #<NUM_LABELS_VRAM
    sta VERA_addr_low
+   ; highlight each waveform based on its flag
    HIGHLIGHT_WF pulse_on
    HIGHLIGHT_WF sawtooth_on
    HIGHLIGHT_WF triangle_on
@@ -427,19 +426,20 @@ custom_irq_handler:
    lda VERA_isr
    and #VSYNC_BIT
    beq @continue ; non-VSYNC IRQ, no tick update
+   ; Check keyboard buffer
    jsr GETIN
    cmp #0
-   bne @set_key
-   lda delay
-   beq @null
-   dec delay
-   bne @continue
-@null:
-   stz current_key
+   bne @set_key ; new PETSCII code available
+   lda delay ; no new code, check if under delay
+   beq @null ; delay already expired, set current key to NULL
+   dec delay ; decrement delay counter
+   bne @continue ; still under delay, keep current key code
+@null: ; delay expired
+   stz current_key ; current key = NULL
    bra @continue
 @set_key:
-   sta current_key
-   lda #16
+   sta current_key ; set new key code
+   lda #16 ; start delay counter
    sta delay
 @continue:
    ; continue to default IRQ handler
