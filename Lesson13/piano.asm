@@ -34,6 +34,10 @@ GETIN             = $FFE4
 CONTROLS_VRAM     = $00200
 KEYS_VRAM         = $00C00
 VRAM_psg          = $1F9C0
+PULSE_CHAN_VRAM   = VRAM_psg
+ST_CHAN_VRAM      = VRAM_psg+4
+TRI_CHAN_VRAM     = VRAM_psg+8
+NOISE_CHAN_VRAM   = VRAM_psg+12
 
 ; --- PSG Values ---
 ; Frequencies:
@@ -50,7 +54,7 @@ A4                = 1181
 Bb4               = 1251
 B4                = 1326
 C5                = 1405
-; LR-Volume:
+; RL-Volume:
 CHANNEL_ON        = $FF ; L&R, max volume
 CHANNEL_OFF       = $00
 ; Waveform:
@@ -60,9 +64,11 @@ TRIANGLE          = $BF
 NOISE             = $FF
 
 ; PETSCII
+COMMA             = $2C
+CHAR_1            = $31
+CHAR_Z            = $5A
 CLR               = $93
 LEFT_CURSOR       = $9D
-
 
 .macro RAM2VRAM ram_addr, vram_addr, num_bytes, color
    .scope
@@ -148,6 +154,63 @@ KEYS_COLOR = $10 ; black on white
 default_irq_vector: .addr 0
 current_key: .byte 0
 delay: .byte 0
+pulse_on: .byte 0
+sawtooth_on: .byte 0
+triangle_on: .byte 0
+noise_on: .byte 0
+frequency: .word 0
+
+
+; key table: value, target address
+key_table:
+.word C5, set_freq         ; ,
+.word 0, stop              ; -
+.word 0, stop              ; .
+.word 0, stop              ; /
+.word 0, stop              ; 0
+.word pulse_on, set_wf     ; 1
+.word sawtooth_on, set_wf  ; 2
+.word triangle_on, set_wf  ; 3
+.word noise_on, set_wf     ; 4
+.word 0, stop              ; 5
+.word 0, stop              ; 6
+.word 0, stop              ; 7
+.word 0, stop              ; 8
+.word 0, stop              ; 9
+.word 0, stop              ; :
+.word 0, stop              ; ;
+.word 0, stop              ; <
+.word 0, stop              ; =
+.word 0, stop              ; >
+.word 0, stop              ; ?
+.word 0, stop              ; @
+.word 0, stop              ; A
+.word G4, set_freq         ; B
+.word E4, set_freq         ; C
+.word Eb4, set_freq        ; D
+.word 0, stop              ; E
+.word 0, stop              ; F
+.word 0, stop              ; G
+.word Ab4, set_freq        ; H
+.word 0, stop              ; I
+.word Bb4, set_freq        ; J
+.word 0, stop              ; K
+.word 0, stop              ; L
+.word B4, set_freq         ; M
+.word A4, set_freq         ; N
+.word 0, stop              ; O
+.word 0, stop              ; P
+.word quit, 0              ; Q
+.word 0, stop              ; R
+.word Db4, set_freq        ; S
+.word 0, stop              ; T
+.word 0, stop              ; U
+.word F4, set_freq         ; V
+.word 0, stop              ; W
+.word D4, set_freq         ; X
+.word 0, stop              ; Y
+.word C4, set_freq         ; Z
+
 
 start:
    ; scale display to 2x zoom (40x30 characters)
@@ -163,6 +226,148 @@ start:
    RAM2VRAM controls, CONTROLS_VRAM, CONTROLS_SIZE, CONTROLS_COLOR
    RAM2VRAM keys, KEYS_VRAM, KEYS_SIZE, KEYS_COLOR
 
+   ; Initialize PSG channels
+   stz VERA_ctrl
+   lda #($10 | ^VRAM_psg) ; stride = 1
+   sta VERA_addr_bank
+   lda #>VRAM_psg
+   sta VERA_addr_high
+   lda #<VRAM_psg
+   sta VERA_addr_low
+   ; Channel 0: Pulse
+   stz VERA_data0 ; freq = 0
+   stz VERA_data0
+   lda CHANNEL_OFF ; turn off
+   sta VERA_data0
+   lda PULSE ; set waveform
+   sta VERA_data0
+   ; Channel 1: Sawtooth
+   stz VERA_data0 ; freq = 0
+   stz VERA_data0
+   lda CHANNEL_OFF ; turn off
+   sta VERA_data0
+   lda SAWTOOTH ; set waveform
+   sta VERA_data0
+   ; Channel 2: Triangle
+   stz VERA_data0 ; freq = 0
+   stz VERA_data0
+   lda CHANNEL_OFF ; turn off
+   sta VERA_data0
+   lda TRIANGLE ; set waveform
+   sta VERA_data0
+   ; Channel 3: Noise
+   stz VERA_data0 ; freq = 0
+   stz VERA_data0
+   lda CHANNEL_OFF ; turn off
+   sta VERA_data0
+   lda NOISE ; set waveform
+   sta VERA_data0
+
+   ; set default waveform to Pulse only
+   stz pulse_on
+   stz sawtooth_on
+   stz triangle_on
+   stz noise_on
+   lda #CHAR_1
+   jsr set_wf
+
+   ; Initialize IRQ handling
+   jsr init_irq
+
+   lda #$20
+   jsr CHROUT
+
+main_loop:
+   wai
+   lda current_key
+   beq stop
+   cmp #(CHAR_Z + 1)
+   bpl stop
+   sec
+   sbc #COMMA
+   bcc stop
+   asl
+   asl
+   tax ; X = key offset * 4
+   ; store value in ZP_PTR
+   lda key_table,x
+   sta ZP_PTR
+   inx
+   lda key_table,x
+   sta ZP_PTR+1
+   ; jump to target
+   inx
+   jmp (key_table,x)
+
+stop:
+   jsr stop_subroutine
+   jmp main_loop
+
+stop_subroutine:
+   stz VERA_ctrl
+   lda #($30 | ^VRAM_psg) ; stride = 4
+   sta VERA_addr_bank
+   lda #>VRAM_psg
+   sta VERA_addr_high
+   lda #<(VRAM_psg + 2) ; RL-Volume byte
+   sta VERA_addr_low
+   lda CHANNEL_OFF
+   sta VERA_data0 ; turn off channel 0
+   sta VERA_data0 ; turn off channel 1
+   sta VERA_data0 ; turn off channel 2
+   sta VERA_data0 ; turn off channel 3
+   rts
+
+.macro SET_FREQ_CHANNEL flag
+   .scope
+      bit flag
+      bpl skip_channel
+      lda ZP_PTR ; frequency, low byte
+      sta VERA_data0
+      lda ZP_PTR ; frequency, high byte
+      sta VERA_data0
+      lda #CHANNEL_ON
+      bra skip_waveform
+   skip_channel:
+      lda VERA_data0
+      lda VERA_data0
+      lda VERA_data0
+   skip_waveform:
+      lda VERA_data0
+   .endscope
+.endmacro
+
+set_freq:
+   stz VERA_ctrl
+   lda #($10 | ^VRAM_psg) ; stride = 1
+   sta VERA_addr_bank
+   lda #>VRAM_psg
+   sta VERA_addr_high
+   lda #<VRAM_psg
+   sta VERA_addr_low
+   SET_FREQ_CHANNEL pulse_on
+   SET_FREQ_CHANNEL sawtooth_on
+   SET_FREQ_CHANNEL triangle_on
+   SET_FREQ_CHANNEL noise_on
+   jmp main_loop
+
+set_wf:
+   jsr stop_subroutine
+   lda current_key
+   sec
+   sbc #CHAR_1
+   asl
+   tax ; X = current_key offset * 2
+   lda (ZP_PTR)
+   eor #$80 ; toggle the high bit
+   sta (ZP_PTR)
+   jmp main_loop
+
+quit:
+   jsr stop_subroutine
+   rts ; return to BASIC
+
+init_irq:
    ; backup default RAM IRQ vector
    lda IRQVec
    sta default_irq_vector
@@ -178,40 +383,26 @@ start:
    lda #VSYNC_BIT ; make VERA only generate VSYNC IRQs
    sta VERA_ien
    cli ; enable IRQ now that vector is properly set
-
-   lda #$20
-   jsr CHROUT
-
-@main_loop:
-   wai
-   lda #LEFT_CURSOR
-   jsr CHROUT
-   lda current_key
-   jsr CHROUT
-   bra @main_loop
-   ; never return, just wait for reset
+   rts
 
 custom_irq_handler:
    lda VERA_isr
    and #VSYNC_BIT
    beq @continue ; non-VSYNC IRQ, no tick update
-
    jsr GETIN
    cmp #0
    bne @set_key
    lda delay
-   beq @space
+   beq @null
    dec delay
    bne @continue
-@space:
-   lda #$20
-   sta current_key
+@null:
+   stz current_key
    bra @continue
 @set_key:
    sta current_key
    lda #16
    sta delay
-
 @continue:
    ; continue to default IRQ handler
    jmp (default_irq_vector)
