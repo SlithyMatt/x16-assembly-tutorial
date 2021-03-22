@@ -237,43 +237,46 @@ start:
    ; Channel 0: Pulse
    stz VERA_data0 ; freq = 0
    stz VERA_data0
-   lda CHANNEL_OFF ; turn off
+   lda #CHANNEL_OFF ; turn off
    sta VERA_data0
-   lda PULSE ; set waveform
+   lda #PULSE ; set waveform
    sta VERA_data0
    ; Channel 1: Sawtooth
    stz VERA_data0 ; freq = 0
    stz VERA_data0
-   lda CHANNEL_OFF ; turn off
+   lda #CHANNEL_OFF ; turn off
    sta VERA_data0
-   lda SAWTOOTH ; set waveform
+   lda #SAWTOOTH ; set waveform
    sta VERA_data0
    ; Channel 2: Triangle
    stz VERA_data0 ; freq = 0
    stz VERA_data0
-   lda CHANNEL_OFF ; turn off
+   lda #CHANNEL_OFF ; turn off
    sta VERA_data0
-   lda TRIANGLE ; set waveform
+   lda #TRIANGLE ; set waveform
    sta VERA_data0
    ; Channel 3: Noise
    stz VERA_data0 ; freq = 0
    stz VERA_data0
-   lda CHANNEL_OFF ; turn off
+   lda #CHANNEL_OFF ; turn off
    sta VERA_data0
-   lda NOISE ; set waveform
+   lda #NOISE ; set waveform
    sta VERA_data0
 
    ; set default waveform to Pulse only
-   stz pulse_on
+   lda #$80
+   sta pulse_on
    stz sawtooth_on
    stz triangle_on
    stz noise_on
-   lda #CHAR_1
-   jsr set_wf
+
+   ; clear current key
+   stz current_key
 
    ; Initialize IRQ handling
    jsr init_irq
 
+   ; clear screen
    lda #$20
    jsr CHROUT
 
@@ -324,9 +327,10 @@ stop_subroutine:
       bpl skip_channel
       lda ZP_PTR ; frequency, low byte
       sta VERA_data0
-      lda ZP_PTR ; frequency, high byte
+      lda ZP_PTR+1 ; frequency, high byte
       sta VERA_data0
       lda #CHANNEL_ON
+      sta VERA_data0
       bra skip_waveform
    skip_channel:
       lda VERA_data0
