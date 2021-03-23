@@ -238,8 +238,8 @@ start:
    sta VERA_L0_tilebase
    stz VERA_L0_hscroll_l ; horizontal scroll = 0
    stz VERA_L0_hscroll_h
-   stz VERA_L0_hscroll_l ; vertical scroll = 0
-   stz VERA_L0_hscroll_h
+   stz VERA_L0_vscroll_l ; vertical scroll = 0
+   stz VERA_L0_vscroll_h
 
    ; configure layer 1: ground
    lda #$02 ; 32x32 4bpp tiles
@@ -250,8 +250,8 @@ start:
    sta VERA_L1_tilebase
    stz VERA_L1_hscroll_l ; horizontal scroll = 0
    stz VERA_L1_hscroll_h
-   stz VERA_L1_hscroll_l ; vertical scroll = 0
-   stz VERA_L1_hscroll_h
+   stz VERA_L1_vscroll_l ; vertical scroll = 0
+   stz VERA_L1_vscroll_h
 
    ; copy tile maps to VRAM
    RAM2VRAM sky, VRAM_layer0_map, MAPS_SIZE
