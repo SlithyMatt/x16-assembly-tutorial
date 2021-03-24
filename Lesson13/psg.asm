@@ -71,7 +71,7 @@ start:
    bne @pw_up_loop
 
    ; switch to sawtooth
-   lda #$7F ; Sawtooth
+   lda #$40 ; Sawtooth
    sta VERA_data0
 
    ; slide sawtooth
@@ -85,7 +85,7 @@ start:
    sta VERA_addr_high
    lda #<(VRAM_psg + 3)
    sta VERA_addr_low
-   lda #$BF ; Sawtooth
+   lda #$80 ; Triangle
    sta VERA_data0
    jsr slide_freq
 
@@ -97,7 +97,7 @@ start:
    sta VERA_addr_high
    lda #<(VRAM_psg + 3)
    sta VERA_addr_low
-   lda #$FF ; Noise
+   lda #$C0 ; Noise
    sta VERA_data0
    jsr slide_freq
 

@@ -55,9 +55,9 @@ CHANNEL_ON        = $FF ; L&R, max volume
 CHANNEL_OFF       = $00
 ; Waveform:
 PULSE             = $3F    ; Pulse Width = 50%
-SAWTOOTH          = $7F
-TRIANGLE          = $BF
-NOISE             = $FF
+SAWTOOTH          = $40
+TRIANGLE          = $80
+NOISE             = $C0
 
 ; PETSCII
 COMMA             = $2C
