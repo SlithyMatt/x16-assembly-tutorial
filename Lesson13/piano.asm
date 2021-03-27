@@ -277,10 +277,6 @@ start:
    ; Initialize IRQ handling
    jsr init_irq
 
-   ; clear screen
-   lda #$20
-   jsr CHROUT
-
 main_loop:
    wai ; wait for next IRQ
    lda current_key
