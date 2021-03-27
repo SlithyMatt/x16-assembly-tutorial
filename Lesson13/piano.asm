@@ -200,7 +200,7 @@ key_table:
 .word A4, set_freq         ; N
 .word 0, stop              ; O
 .word 0, stop              ; P
-.word quit, 0              ; Q
+.word 0, quit              ; Q
 .word 0, stop              ; R
 .word Db4, set_freq        ; S
 .word 0, stop              ; T
@@ -355,11 +355,6 @@ set_freq:
 
 set_wf:
    jsr stop_subroutine
-   lda current_key
-   sec
-   sbc #CHAR_1
-   asl
-   tax ; X = current_key offset * 2
    lda (ZP_PTR)
    eor #$80 ; toggle the high bit
    sta (ZP_PTR)
