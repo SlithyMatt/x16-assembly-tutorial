@@ -64,7 +64,6 @@ COMMA             = $2C
 CHAR_1            = $31
 CHAR_Z            = $5A
 CLR               = $93
-LEFT_CURSOR       = $9D
 
 ; VRAM staging on RAM
 
