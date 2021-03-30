@@ -46,7 +46,7 @@ brush_x:             .byte 0
 brush_y:             .byte 0
 painting:            .byte 0
 joystick_state:      .byte 0
-joystick_latch:      .byte $EF
+joystick_latch:      .byte $CF
 
 start:
    ; clear screen
@@ -64,8 +64,8 @@ start:
    ; not painting at first
    stz painting
 
-   ; initial joystick state: Enter/Start pressed
-   lda #$EF
+   ; initial joystick state: Start & Select pressed
+   lda #$CF
    sta joystick_latch
 
 main_loop:
