@@ -11,6 +11,9 @@ ZP_PTR            = $30
 MOUSE_X           = $32
 MOUSE_Y           = $34
 
+; RAM Interrupt Vectors
+IRQVec            = $0314
+
 ; VERA
 VERA_addr_low     = $9F20
 VERA_addr_high    = $9F21
@@ -36,10 +39,11 @@ WHITE             = 1
 BLUE              = 6
 
 ; Global Variables
-paint_color:   .byte WHITE
-brush_x:       .byte 0
-brush_y:       .byte 0
-painting:      .byte 0
+default_irq_vector:  .addr 0
+paint_color:         .byte WHITE
+brush_x:             .byte 0
+brush_y:             .byte 0
+painting:            .byte 0
 
 start:
    ; clear screen
@@ -57,21 +61,50 @@ start:
    ; not painting at first
    stz painting
 
+   ; initialize custom IRQ handling
+   jsr init_irq
+
 main_loop:
    wai
    jsr GETIN
    cmp #CHAR_Q
-   beq @exit ; exit on any key
+   bne main_loop ; keep looping until Q is pressed
+@exit:
+   lda #CLR
+   jsr CHROUT
+   rts
+
+init_irq:
+   ; backup default RAM IRQ vector
+   lda IRQVec
+   sta default_irq_vector
+   lda IRQVec+1
+   sta default_irq_vector+1
+
+   ; overwrite RAM IRQ vector with custom handler address
+   sei ; disable IRQ while vector is changing
+   lda #<custom_irq_handler
+   sta IRQVec
+   lda #>custom_irq_handler
+   sta IRQVec+1
+   lda #VSYNC_BIT ; make VERA only generate VSYNC IRQs
+   sta VERA_ien
+   cli ; enable IRQ now that vector is properly set
+   rts
+
+custom_irq_handler:
+   lda VERA_isr
+   and #VSYNC_BIT
+   beq @continue ; non-VSYNC IRQ, no update
    lda #SPACE
    jsr plot_char
    jsr handle_joystick
    lda #SPADE
    jsr plot_char
-   bra main_loop
-@exit:
-   lda #CLR
-   jsr CHROUT
-   rts
+@continue:
+   ; continue to default IRQ handler
+   jmp (default_irq_vector)
+   ; RTI will happen after jump
 
 plot_char:
    pha ; push PETSCII code to stack
