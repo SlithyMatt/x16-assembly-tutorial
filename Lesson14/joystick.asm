@@ -21,6 +21,7 @@ VERA_addr_bank    = $9F22
 VERA_data0        = $9F23
 VERA_ctrl         = $9F25
 VERA_ien          = $9F26
+VERA_isr          = $9F27
 VSYNC_BIT         = $01
 
 ; Kernal
@@ -173,14 +174,14 @@ handle_joystick:
    ldy #79
    sty brush_x
 @check_start:
-   txa
    bit #$10
    bne @check_select
+   pha
    lda painting
    eor #$80
    sta painting
+   pla
 @check_select:
-   txa
    bit #$20
    bne @return
    lda paint_color
