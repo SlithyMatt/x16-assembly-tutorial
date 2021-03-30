@@ -45,6 +45,8 @@ paint_color:         .byte WHITE
 brush_x:             .byte 0
 brush_y:             .byte 0
 painting:            .byte 0
+joystick_state:      .byte 0
+joystick_latch:      .byte $FF
 
 start:
    ; clear screen
@@ -61,6 +63,10 @@ start:
 
    ; not painting at first
    stz painting
+
+   ; initial joystick state: nothing pressed
+   lda #$FF
+   sta joystick_latch
 
    ; initialize custom IRQ handling
    jsr init_irq
@@ -136,6 +142,10 @@ plot_char:
 handle_joystick:
    lda #0
    jsr JOYSTICK_GET
+   sta joystick_state
+   eor joystick_latch
+   sta joystick_latch
+   lda joystick_state
    bit #$08
    beq @up
 @check_down:
@@ -176,17 +186,24 @@ handle_joystick:
 @check_start:
    bit #$10
    bne @check_select
-   pha
+   lda joystick_latch
+   bit #$10
+   beq @check_select
    lda painting
    eor #$80
    sta painting
-   pla
 @check_select:
+   lda joystick_state
    bit #$20
-   bne @return
+   bne @latch
+   lda joystick_latch
+   bit #$20
+   beq @latch
    lda paint_color
    inc
    and #$0F
    sta paint_color
-@return:
+@latch:
+   lda joystick_state
+   sta joystick_latch
    rts
