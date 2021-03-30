@@ -24,19 +24,20 @@ VSYNC_BIT         = $01
 MOUSE_CONFIG      = $FF68
 MOUSE_GET         = $FF6B
 CHROUT            = $FFD2
+GETIN             = $FFE4
 
 ; PETSCII
 SPACE             = $20
 LO_HALF_BLOCK     = $62
 CLR               = $93
 RT_HALF_BLOCK     = $E1
-HI_HALF_BLOCK     = $62
+HI_HALF_BLOCK     = $E2
 UL_UR_LR_QUAD     = $FB
 UR_LL_LR_QUAD     = $FE
 
 ; Colors
 WHITE             = 1
-RED               = 2
+PINK              = 10
 
 ; Screen geometry
 COLORBAR_END      = 5
@@ -86,20 +87,17 @@ start:
    cpx #16
    bne @top_border_loop
    ; Rows 1-4
-   ldx #64
+   ldx #0
 @middle_color_bar_loop:
-   txa
    stz row_counter
+   txa
    asl
-   rol row_counter
    asl
-   rol row_counter
    asl
-   rol row_counter
    asl
-   rol row_counter
    pha
-   lda row_counter
+   txa
+   and #$0F
    bne @start_middle_row
    ; skip ahead to next row
    ldy #96
@@ -121,7 +119,8 @@ start:
    lda #RT_HALF_BLOCK
    sta VERA_data0
    sty VERA_data0
-   dex
+   inx
+   cpx #64
    bne @middle_color_bar_loop
    ; skip to last row
    ldy #96
@@ -131,7 +130,7 @@ start:
    bne @skip_last_row
    ; render last row
    ldx #0
-@top_border_loop:
+@bottom_border_loop:
    txa
    asl
    asl
@@ -152,16 +151,37 @@ start:
    sty VERA_data0
    inx
    cpx #16
-   bne @top_border_loop
+   bne @bottom_border_loop
    ; render canvas - all white spaces
-   
+REMAINDER = 48 + (60-COLORBAR_END)*128
+   ldx #<REMAINDER
+   ldy #>REMAINDER
+@canvas_loop:
+   lda #SPACE
+   sta VERA_data0
+   lda #(WHITE << 4)
+   sta VERA_data0
+   dex
+   bne @canvas_loop
+   cpy #0
+   beq @init_select
+   dey
+   bra @canvas_loop
 
+@init_select:
    ; initialize color selection
    lda #WHITE
    jsr select_color
 
+   ; enable default mouse cursor
+   lda #1
+   tax
+   jsr MOUSE_CONFIG
+
 main_loop:
-   jsr get_click
+   jsr GETIN
+   bne @exit ; exit on any key
+   jsr get_mouse_xy
    bit #$1
    beq main_loop ; not left button
    cpy #CANVAS_START
@@ -173,18 +193,20 @@ main_loop:
 @paint:
    jsr paint_canvas
    bra main_loop
-@return:
+@exit:
+   lda #CLR
+   jsr CHROUT
    rts
 
 
 select_color: ; Input: A = color
    bra @start
 @color:           .res 1
-@red_bar_color:   .res 1
-@red_start_x:     .res 1
+@pink_bar_color:  .res 1
+@pink_start_x:    .res 1
 @old_color:       .res 1
 @old_start_x:     .res 1
-@start
+@start:
    sta @color
    lda paint_color
    sta @old_color ; previous color BG, black FG
@@ -194,14 +216,14 @@ select_color: ; Input: A = color
    asl
    asl
    sta paint_color ; color << 4
-   ora #RED
-   sta @red_bar_color ; color BG, red FG
+   ora #PINK
+   sta @pink_bar_color ; color BG, pink FG
    lda @color
    asl
    asl
    clc
    adc @color
-   sta @red_start_x ; color * 5
+   sta @pink_start_x ; color * 5
    lda @old_color
    lsr
    lsr
@@ -227,12 +249,12 @@ select_color: ; Input: A = color
    sta VERA_data0
    sta VERA_data0
    sta VERA_data0
-   ; make new bar bottom red
-   lda @red_start_x
+   ; make new bar bottom pink
+   lda @pink_start_x
    asl
    inc ; X * 2 + 1
    sta VERA_addr_low
-   lda @red_bar_color
+   lda @pink_bar_color
    sta VERA_data0
    sta VERA_data0
    sta VERA_data0
@@ -240,8 +262,24 @@ select_color: ; Input: A = color
    sta VERA_data0
    rts
 
-get_click: ; Output: A = button ID; X/Y = text map coordinates
-
+get_mouse_xy: ; Output: A = button ID; X/Y = text map coordinates
+   ldx #MOUSE_X
+   jsr MOUSE_GET
+   ; divide coordinates by 8
+   lsr MOUSE_X+1
+   ror MOUSE_X
+   lsr MOUSE_X+1
+   ror MOUSE_X
+   lsr MOUSE_X+1
+   ror MOUSE_X
+   ldx MOUSE_X
+   lsr MOUSE_Y+1
+   ror MOUSE_Y
+   lsr MOUSE_Y+1
+   ror MOUSE_Y
+   lsr MOUSE_Y+1
+   ror MOUSE_Y
+   ldy MOUSE_Y
    rts
 
 div5: ; A = A / 5
@@ -268,5 +306,13 @@ div5: ; A = A / 5
    rts
 
 paint_canvas: ; Input: X/Y = text map coordinates
-
+   stz VERA_ctrl
+   stz VERA_addr_bank ; stride = 0
+   sty VERA_addr_high ; Y
+   txa
+   asl
+   inc
+   sta VERA_addr_low ; 2*X + 1
+   lda paint_color
+   sta VERA_data0
    rts
