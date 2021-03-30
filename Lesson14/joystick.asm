@@ -46,7 +46,7 @@ brush_x:             .byte 0
 brush_y:             .byte 0
 painting:            .byte 0
 joystick_state:      .byte 0
-joystick_latch:      .byte $FF
+joystick_latch:      .byte $EF
 
 start:
    ; clear screen
@@ -64,54 +64,26 @@ start:
    ; not painting at first
    stz painting
 
-   ; initial joystick state: nothing pressed
-   lda #$FF
+   ; initial joystick state: Enter/Start pressed
+   lda #$EF
    sta joystick_latch
-
-   ; initialize custom IRQ handling
-   jsr init_irq
 
 main_loop:
    wai
    jsr GETIN
    cmp #CHAR_Q
-   bne main_loop ; keep looping until Q is pressed
-@exit:
-   lda #CLR
-   jsr CHROUT
-   rts
-
-init_irq:
-   ; backup default RAM IRQ vector
-   lda IRQVec
-   sta default_irq_vector
-   lda IRQVec+1
-   sta default_irq_vector+1
-
-   ; overwrite RAM IRQ vector with custom handler address
-   sei ; disable IRQ while vector is changing
-   lda #<custom_irq_handler
-   sta IRQVec
-   lda #>custom_irq_handler
-   sta IRQVec+1
-   lda #VSYNC_BIT ; make VERA only generate VSYNC IRQs
-   sta VERA_ien
-   cli ; enable IRQ now that vector is properly set
-   rts
-
-custom_irq_handler:
-   lda VERA_isr
-   and #VSYNC_BIT
-   beq @continue ; non-VSYNC IRQ, no update
+   beq @exit ; Q was pressed
    lda #SPACE
    jsr plot_char
    jsr handle_joystick
    lda #SPADE
    jsr plot_char
-@continue:
-   ; continue to default IRQ handler
-   jmp (default_irq_vector)
-   ; RTI will happen after jump
+   bra main_loop
+@exit:
+   lda #CLR
+   jsr CHROUT
+   rts
+
 
 plot_char:
    pha ; push PETSCII code to stack
