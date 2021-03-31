@@ -7,7 +7,6 @@
    jmp start
 
 ; Zero Page
-ZP_PTR            = $30
 MOUSE_X           = $32
 MOUSE_Y           = $34
 

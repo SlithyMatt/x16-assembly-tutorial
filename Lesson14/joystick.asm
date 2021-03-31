@@ -6,14 +6,6 @@
 
    jmp start
 
-; Zero Page
-ZP_PTR            = $30
-MOUSE_X           = $32
-MOUSE_Y           = $34
-
-; RAM Interrupt Vectors
-IRQVec            = $0314
-
 ; VERA
 VERA_addr_low     = $9F20
 VERA_addr_high    = $9F21
@@ -21,7 +13,6 @@ VERA_addr_bank    = $9F22
 VERA_data0        = $9F23
 VERA_ctrl         = $9F25
 VERA_ien          = $9F26
-VERA_isr          = $9F27
 VSYNC_BIT         = $01
 
 ; Kernal
@@ -37,10 +28,8 @@ CLR               = $93
 
 ; Colors
 WHITE             = 1
-BLUE              = 6
 
 ; Global Variables
-default_irq_vector:  .addr 0
 paint_color:         .byte WHITE
 brush_x:             .byte 0
 brush_y:             .byte 0
@@ -60,6 +49,10 @@ start:
    ; intiialize brush coordinates to 0,0
    stz brush_x
    stz brush_y
+
+   ; intialize paint color to white
+   lda #WHITE
+   sta paint_color
 
    ; not painting at first
    stz painting
@@ -120,13 +113,11 @@ handle_joystick:
    lda joystick_state
    bit #$08
    beq @up
-@check_down:
    bit #$04
    beq @down
 @check_left:
    bit #$02
    beq @left
-@check_right:
    bit #$01
    beq @right
    bra @check_start
