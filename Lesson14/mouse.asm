@@ -44,7 +44,6 @@ CANVAS_START      = COLORBAR_END+1
 
 ; Global Variables
 paint_color: .byte WHITE << 4
-row_counter: .byte 0
 
 start:
    ; clear screen
@@ -88,7 +87,6 @@ start:
    ; Rows 1-4
    ldx #0
 @middle_color_bar_loop:
-   stz row_counter
    txa
    asl
    asl
@@ -181,7 +179,7 @@ main_loop:
    jsr GETIN
    bne @exit ; exit on any key
    jsr get_mouse_xy
-   bit #$1
+   bit #$01
    beq main_loop ; not left button
    cpy #CANVAS_START
    bpl @paint
