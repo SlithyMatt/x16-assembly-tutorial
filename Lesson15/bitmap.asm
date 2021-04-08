@@ -181,25 +181,30 @@ custom_irq_handler:
    lda VERA_isr
    and #VSYNC_BIT
    beq @continue ; non-VSYNC IRQ, no tick update
-
+   ; decrement timing counter until zero
    dec counter
    bne @continue
+   ; counter down to zero, reset
    lda #INIT_COUNTER
    sta counter
-
+   ; check fade direction
    bit reverse
    bmi @decrement
+   ; increment palette offset to fade out
    inc offset
    lda offset
    cmp #4
    bne @set_offset
+   ; switch to reverse direction for next cycle
    lda #$80
    sta reverse
    bra @set_offset
 @decrement:
+   ; decrement palette offset to fade in
    dec offset
    bpl @set_offset
    stz offset
+   ; switch to forward direction for next cycle
    stz reverse
 @set_offset:
    lda offset
