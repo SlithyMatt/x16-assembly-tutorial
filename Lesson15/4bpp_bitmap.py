@@ -10,7 +10,7 @@ f = open("BITMAP.BIN", "wb")
 oData = bytearray([0,0]) # header
 
 # consolidate pixels to 4bpp
-for i in range(0,len(iData)/2):
+for i in range(0,int(len(iData)/2)):
     oData.append((iData[i*2] << 4) | iData[i*2+1])
 
 # write bitmap file
@@ -27,7 +27,7 @@ f = open("PAL.BIN", "wb")
 oData = bytearray([0,0]) # header
 
 # truncate colors to 12-bit
-for i in range(0,len(iData)/3):
+for i in range(0,int(len(iData)/3)):
     b = iData[i*3+1] & 0xF0 # blue
     b = b | (iData[i*3+2] >> 4) # green
     oData.append(b) #BG
