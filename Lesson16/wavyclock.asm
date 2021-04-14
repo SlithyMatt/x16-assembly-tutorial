@@ -59,6 +59,7 @@ minutes: .byte 0
 seconds: .byte 0
 reverse: .byte 0
 counter: .byte 0
+top_scroll: .byte 0
 DELAY = 10
 
 .macro PRINT_DECIMAL num
@@ -102,9 +103,11 @@ start:
    ; print clock
    jsr print_display
 
-   ; initialize counter
+   ; initialize globals
    lda #DELAY
    sta counter
+   stz reverse
+   stz top_scroll
 
    ; backup default RAM IRQ vector
    lda IRQVec
@@ -126,6 +129,7 @@ start:
 
 @loop:
    wai
+   jsr print_display
    jsr GETIN
    cmp #CHAR_Q
    bne @loop
