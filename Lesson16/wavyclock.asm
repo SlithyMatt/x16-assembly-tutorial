@@ -57,9 +57,9 @@ default_irq_vector: .addr 0
 hours: .byte 0
 minutes: .byte 0
 seconds: .byte 0
-reverse: .byte 0
 counter: .byte 0
 top_scroll: .byte 0
+scroll_wave: .byte 0,0,1,2,3,3,2,1,0,0,1,2,3,3,2
 DELAY = 10
 
 .macro PRINT_DECIMAL num
@@ -106,7 +106,6 @@ start:
    ; initialize globals
    lda #DELAY
    sta counter
-   stz reverse
    stz top_scroll
 
    ; backup default RAM IRQ vector
@@ -148,38 +147,31 @@ custom_irq_handler:
    beq @check_line
    dec counter
    bne @continue
-   lda #(LINE_BIT | VSYNC_BIT) ; make VERA only generate LINE and VSYNC IRQs
-   sta VERA_ien
    lda #DELAY
    sta counter
+   inc top_scroll
+   lda top_scroll
+   cmp #8
+   bne @continue
+   stz top_scroll
    bra @continue
 @check_line:
    bit #LINE_BIT
    beq @continue ; non-LINE IRQ, no change to scroll
-   bit reverse
-   bmi @decrement
-   inc VERA_L1_hscroll_l
-   lda VERA_L1_hscroll_l
-   cmp #3
-   bne @next_line
-   dec VERA_L1_hscroll_l
-   lda #$80
-   sta reverse
-   bra @next_line
-@decrement:
-   dec VERA_L1_hscroll_l
-   bpl @next_line
-   stz VERA_L1_hscroll_l
-   stz reverse
-@next_line:
+   lda VERA_irqline_l
+   sec
+   sbc #(DISPLAY_Y * 8) ; get offset from top
+   clc
+   adc top_scroll
+   tax
+   lda scroll_wave,x
+   sta VERA_L1_hscroll_l
    inc VERA_irqline_l
    lda VERA_irqline_l
    cmp #((DISPLAY_Y + 1) * 8)
    bne @continue
    lda #(DISPLAY_Y * 8) ; back to top of number display
    sta VERA_irqline_l
-   lda #VSYNC_BIT ; disable LINE IRQs until counter goes back down
-   sta VERA_ien
 @continue:
    ; reset IRQs
    lda #(LINE_BIT | VSYNC_BIT)
