@@ -60,7 +60,7 @@ seconds: .byte 0
 counter: .byte 0
 top_scroll: .byte 0
 scroll_wave: .byte 0,0,1,2,3,3,2,1,0,0,1,2,3,3,2
-DELAY = 10
+DELAY = 60
 
 .macro PRINT_DECIMAL num
    lda num
@@ -85,7 +85,6 @@ start:
    sta VERA_dc_vscale ; zoom level set
    stz VERA_L1_hscroll_l ; H-scroll = 0
    stz VERA_L1_hscroll_h
-   stz reverse ; init to forward
 
    ; set colors of right end of text map
    stz VERA_ctrl
@@ -167,7 +166,6 @@ custom_irq_handler:
    lda scroll_wave,x
    sta VERA_L1_hscroll_l
    inc VERA_irqline_l
-   lda VERA_irqline_l
    cmp #((DISPLAY_Y + 1) * 8)
    bne @continue
    lda #(DISPLAY_Y * 8) ; back to top of number display
