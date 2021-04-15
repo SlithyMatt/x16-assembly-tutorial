@@ -1,3 +1,3 @@
 #!/bin/sh
 
-cl65 -t cx16 -o WAVY.PRG -l wavyclock.list wavyclock.asm
+cl65 -t cx16 -o CLOCK.PRG -l clock.list clock.asm

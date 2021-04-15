@@ -30,12 +30,11 @@ VERA_ien             = $9F26
 VERA_isr             = $9F27
 VSYNC_BIT            = $01
 LINE_BIT             = $02
+IRQ_LINE_8           = $80
 VERA_irqline_l       = $9F28
 VERA_dc_hscale       = $9F2A
 VERA_dc_vscale       = $9F2B
 DISPLAY_SCALE        = 16 ; 8X zoom
-VERA_L1_hscroll_l    = $9F37
-VERA_L1_hscroll_h    = $9F38
 
 ; Kernal
 CLOCK_GET_DATE_TIME  = $FF50
@@ -43,6 +42,7 @@ CHROUT               = $FFD2
 GETIN                = $FFE4
 
 ; PETSCII
+SPACE                = $20
 CHAR_0               = $30
 COLON                = $3A
 CHAR_Q               = $51
@@ -58,9 +58,11 @@ hours: .byte 0
 minutes: .byte 0
 seconds: .byte 0
 counter: .byte 0
-top_scroll: .byte 0
-scroll_wave: .byte 0,0,1,2,3,3,2,1,0,0,1,2,3,3,2
-DELAY = 60
+color_wave: .byte $6B,$6C,$6F,$61,$61,$6F,$6C,$6B
+
+LINES_PER_PIXEL   = 128/DISPLAY_SCALE
+START_LINE        = DISPLAY_Y * 8 * LINES_PER_PIXEL - 64/DISPLAY_SCALE
+STOP_LINE         = START_LINE + LINES_PER_PIXEL * 8
 
 .macro PRINT_DECIMAL num
    lda num
@@ -83,8 +85,6 @@ start:
    lda #DISPLAY_SCALE
    sta VERA_dc_hscale
    sta VERA_dc_vscale ; zoom level set
-   stz VERA_L1_hscroll_l ; H-scroll = 0
-   stz VERA_L1_hscroll_h
 
    ; set colors of right end of text map
    stz VERA_ctrl
@@ -103,9 +103,7 @@ start:
    jsr print_display
 
    ; initialize globals
-   lda #DELAY
-   sta counter
-   stz top_scroll
+   stz counter
 
    ; backup default RAM IRQ vector
    lda IRQVec
@@ -121,7 +119,8 @@ start:
    sta IRQVec+1
    lda #(LINE_BIT | VSYNC_BIT) ; make VERA only generate VSYNC IRQs
    sta VERA_ien
-   lda #(DISPLAY_Y * 8) ; set LINE interrupt to start at top of number display
+   ; set LINE interrupt to start half-pixel above number display
+   lda #START_LINE
    sta VERA_irqline_l
    cli ; enable IRQ now that vector is properly set
 
@@ -137,39 +136,68 @@ start:
    sta IRQVec
    lda default_irq_vector+1
    sta IRQVec+1
+   lda #VSYNC_BIT
+   sta VERA_ien
    cli
+   lda #128
+   sta VERA_dc_hscale
+   sta VERA_dc_vscale ; zoom level reset
+   lda #CLR
+   jsr CHROUT
    rts
 
 custom_irq_handler:
    lda VERA_isr
    bit #VSYNC_BIT
    beq @check_line
-   dec counter
-   bne @continue
-   lda #DELAY
-   sta counter
-   inc top_scroll
-   lda top_scroll
-   cmp #8
-   bne @continue
-   stz top_scroll
+   lda #$61
+   sta VERA_data0
+   stz counter
    bra @continue
 @check_line:
    bit #LINE_BIT
    beq @continue ; non-LINE IRQ, no change to scroll
+   stz VERA_ctrl
+   lda #$20 ; stride = 2
+   sta VERA_addr_bank
+   lda #DISPLAY_Y
+   sta VERA_addr_high
+   lda #(DISPLAY_X * 2 + 1)
+   sta VERA_addr_low
+   ldx counter
+   lda color_wave,x
+   ldy #8
+@color_loop:
+   sta VERA_data0
+   dey
+   bne @color_loop
+   inc counter
    lda VERA_irqline_l
-   sec
-   sbc #(DISPLAY_Y * 8) ; get offset from top
    clc
-   adc top_scroll
-   tax
-   lda scroll_wave,x
-   sta VERA_L1_hscroll_l
-   inc VERA_irqline_l
-   cmp #((DISPLAY_Y + 1) * 8)
-   bne @continue
-   lda #(DISPLAY_Y * 8) ; back to top of number display
+   adc #LINES_PER_PIXEL
    sta VERA_irqline_l
+   bcc @clear_bit8
+   lda #(IRQ_LINE_8 | LINE_BIT | VSYNC_BIT)
+   bra @set_line
+@clear_bit8:
+   lda #(LINE_BIT | VSYNC_BIT)
+@set_line:
+   sta VERA_ien
+   lda VERA_irqline_l
+   cmp #<STOP_LINE
+   bne @quick_return
+   lda #START_LINE
+   sta VERA_irqline_l
+   lda #(LINE_BIT | VSYNC_BIT)
+   sta VERA_ien
+@quick_return:
+   ; reset IRQs
+   lda #(LINE_BIT | VSYNC_BIT)
+   sta VERA_isr
+   ply
+   plx
+   pla
+   rti
 @continue:
    ; reset IRQs
    lda #(LINE_BIT | VSYNC_BIT)
@@ -180,8 +208,15 @@ custom_irq_handler:
 
 print_display:
    jsr CLOCK_GET_DATE_TIME
-   ; TODO: convert RTC values to BCD
-
+   lda r1H
+   jsr bin2dec
+   sta hours
+   lda r2L
+   jsr bin2dec
+   sta minutes
+   lda r2H
+   jsr bin2dec
+   sta seconds
    stz VERA_ctrl
    lda #$20 ; stride = 2
    sta VERA_addr_bank
@@ -196,4 +231,25 @@ print_display:
    lda #COLON
    sta VERA_data0
    PRINT_DECIMAL seconds
+   lda #SPACE
+   sta VERA_data0
+   rts
+
+bin2dec:
+   bra @start
+@bin: .byte 0
+@bcd: .byte 0
+@start:
+   sta @bin
+   stz @bcd
+   ldx #8
+   sed
+@loop:
+   asl @bin
+   lda @bcd
+   adc @bcd
+   sta @bcd
+   dex
+   bne @loop
+   cld
    rts
