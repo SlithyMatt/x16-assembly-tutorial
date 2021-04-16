@@ -60,7 +60,7 @@ counter: .byte 0
 color_wave: .byte $6B,$6C,$6F,$61,$61,$6F,$6C,$6B
 
 LINES_PER_PIXEL   = 128/DISPLAY_SCALE
-START_LINE        = DISPLAY_Y * 8 * LINES_PER_PIXEL - 64/DISPLAY_SCALE
+START_LINE        = DISPLAY_Y * 8 * LINES_PER_PIXEL - LINES_PER_PIXEL/2
 STOP_LINE         = START_LINE + LINES_PER_PIXEL * 8
 
 .macro PRINT_DECIMAL num
@@ -112,7 +112,6 @@ start:
 
 @loop:
    wai
-   jsr print_display
    jsr GETIN
    cmp #CHAR_Q
    bne @loop
@@ -136,6 +135,7 @@ custom_irq_handler:
    lda VERA_isr
    bit #VSYNC_BIT
    beq @check_line
+   jsr print_display
    stz counter
    bra @continue
 @check_line:
