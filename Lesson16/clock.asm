@@ -42,7 +42,6 @@ CHROUT               = $FFD2
 GETIN                = $FFE4
 
 ; PETSCII
-SPACE                = $20
 CHAR_0               = $30
 COLON                = $3A
 CHAR_Q               = $51
@@ -85,19 +84,6 @@ start:
    lda #DISPLAY_SCALE
    sta VERA_dc_hscale
    sta VERA_dc_vscale ; zoom level set
-
-   ; set colors of right end of text map
-   stz VERA_ctrl
-   lda #$90 ; stride = 256
-   sta VERA_addr_high
-   lda #(127*2 + 1) ; column 127 colors
-   sta VERA_addr_low
-   ldx #8 ; only worry about visible rows (0-7)
-   lda #$61 ; white on blue
-@color_loop:
-   sta VERA_data0
-   dex
-   bne @color_loop
 
    ; print clock
    jsr print_display
@@ -150,8 +136,6 @@ custom_irq_handler:
    lda VERA_isr
    bit #VSYNC_BIT
    beq @check_line
-   lda #$61
-   sta VERA_data0
    stz counter
    bra @continue
 @check_line:
@@ -176,13 +160,10 @@ custom_irq_handler:
    clc
    adc #LINES_PER_PIXEL
    sta VERA_irqline_l
-   bcc @clear_bit8
+   bcc @set_line
    lda #(IRQ_LINE_8 | LINE_BIT | VSYNC_BIT)
-   bra @set_line
-@clear_bit8:
-   lda #(LINE_BIT | VSYNC_BIT)
-@set_line:
    sta VERA_ien
+@set_line:
    lda VERA_irqline_l
    cmp #<STOP_LINE
    bne @quick_return
@@ -231,8 +212,6 @@ print_display:
    lda #COLON
    sta VERA_data0
    PRINT_DECIMAL seconds
-   lda #SPACE
-   sta VERA_data0
    rts
 
 bin2dec:
