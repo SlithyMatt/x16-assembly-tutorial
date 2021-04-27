@@ -120,14 +120,12 @@ YM_KF          = $30
 YM_PMS_AMS     = $38
 
 YM_DT1_MUL     = $40
+YM_M1_SLOT     = $00
+YM_C1_SLOT     = $08
+YM_M2_SLOT     = $10
+YM_C2_SLOT     = $18
 
-YM_TL_M1       = $60
-
-YM_TL_C1       = $68
-
-YM_TL_M2       = $70
-
-YM_TL_C2       = $78
+YM_TL          = $60
 
 YM_KS_AR       = $80
 
