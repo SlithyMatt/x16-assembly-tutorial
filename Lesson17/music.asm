@@ -24,7 +24,7 @@ WAIT_REG = $02
 .byte WAIT_REG,0
 .endmacro
 
-END_REG = $00
+END_REG = $04
 .macro END_MUSIC
 .byte END_REG,0
 .endmacro
