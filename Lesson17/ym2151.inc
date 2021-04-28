@@ -55,6 +55,8 @@ YM_LOAD_B      = $02
 YM_LFRQ        = $18
 
 YM_PMD_AMD     = $19
+YM_PMD         = $80
+YM_AMD         = $00
 
 YM_CT_W        = $1B
 YM_CT1         = $40

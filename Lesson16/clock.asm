@@ -103,7 +103,7 @@ start:
    sta IRQVec
    lda #>custom_irq_handler
    sta IRQVec+1
-   lda #(LINE_BIT | VSYNC_BIT) ; make VERA only generate VSYNC IRQs
+   lda #(LINE_BIT | VSYNC_BIT) ; make VERA only generate LINE and VSYNC IRQs
    sta VERA_ien
    ; set LINE interrupt to start half-pixel above number display
    lda #START_LINE

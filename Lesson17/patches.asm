@@ -3,9 +3,9 @@
 ym_init_patch:
 .byte YM_TEST, YM_LFO_RESET
 .byte YM_LFRQ, 0
-.byte YM_CT_W, 0
-.byte YM_PMD_AMD, $ff
-.byte YM_PMD_AMD, $7f
+.byte YM_CT_W, YM_W_SAWTOOTH
+.byte YM_PMD_AMD, YM_PMD | $7f
+.byte YM_PMD_AMD, YM_AMD | $7f
 .byte YM_KEY_ON, YM_CH_1
 .byte YM_KEY_ON, YM_CH_2
 .byte YM_KEY_ON, YM_CH_3
