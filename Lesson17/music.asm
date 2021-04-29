@@ -29,14 +29,14 @@ END_REG = $04
 .byte END_REG,0
 .endmacro
 
-.macro NOTE voice, key, octave
-.byte YM_KEY_ON, voice
-.byte YM_KC | voice, key | octave
-.byte YM_KEY_ON, voice | YM_SN_ALL
+.macro NOTE channel, key, octave
+.byte YM_KEY_ON, channel
+.byte YM_KC | channel, key | octave
+.byte YM_KEY_ON, channel | YM_SN_ALL
 .endmacro
 
-.macro REST voice
-.byte YM_KEY_ON, voice
+.macro REST channel
+.byte YM_KEY_ON, channel
 .endmacro
 
 start_music:

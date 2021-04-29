@@ -1,6 +1,5 @@
 
 ; initialization
-ym_init_patch:
 .byte YM_TEST, YM_LFO_RESET
 .byte YM_LFRQ, 0
 .byte YM_CT_W, YM_W_SAWTOOTH
@@ -16,7 +15,6 @@ ym_init_patch:
 .byte YM_KEY_ON, YM_CH_8
 
 ; set patches
-ym_channel_patches:
 ; Channels 1-4: Piano
 ; Channel 1:
 .byte YM_DT1_MUL | YM_M1_SLOT | YM_CH_1, $31
