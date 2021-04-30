@@ -83,8 +83,7 @@ start:
 
    ; initialize globals
    stz done
-   lda #HALF_BEAT
-   sta counter
+   stz counter
 
    ; backup default RAM IRQ vector
    lda IRQVec
