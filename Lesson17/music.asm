@@ -83,7 +83,8 @@ start:
 
    ; initialize globals
    stz done
-   stz counter
+   lda #1
+   sta counter
 
    ; backup default RAM IRQ vector
    lda IRQVec
