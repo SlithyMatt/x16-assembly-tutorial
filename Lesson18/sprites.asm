@@ -17,7 +17,8 @@ MOUSE_Y        = MOUSE_X + 2
 VSYNC_BIT      = $01
 SPRCOL_BIT     = $04
 ; ISR/Sprite Attributes:
-COLLISION      = $10
+COLLISION1     = $10
+COLLISION2     = $20
 ; DC_VIDEO:
 SPRITE_LAYER   = $40
 LAYER1         = $20
@@ -32,7 +33,7 @@ SPRITE_32W     = $20
 VRAM_sprite_frames = $04000
 VRAM_shadow_sprite = VRAM_sprattr + 8
 SPRITE_SIZE = 32 * 32 / 2 ; 32x32 4bpp
-NUM_FRAMES = 10
+NUM_FRAMES = 20
 END_SPRITES = VRAM_sprite_frames + (SPRITE_SIZE * NUM_FRAMES)
 
 ; PETSCII
@@ -41,7 +42,6 @@ CHAR_Q   = $51
 
 ; globals
 default_irq_vector: .addr 0
-done: .byte 0
 frame: .word (VRAM_sprite_frames >> 5)
 
 sprites_fn:    .byte "sprites.bin"
@@ -49,7 +49,6 @@ end_sprites_fn:
 
 start:
    ; initialize globals
-   stz done
    lda #<(VRAM_sprite_frames >> 5)
    sta frame
    lda #>(VRAM_sprite_frames >> 5)
@@ -88,7 +87,7 @@ start:
    lda VERA_data0
    lda VERA_data0
    ; set to Z-level 3, no flipping
-   lda #(COLLISION | SPRITE_Z3)
+   lda #(COLLISION1 | SPRITE_Z3)
    sta VERA_data0
    ; set to 32x32, palette offset 0
    lda #(SPRITE_32H | SPRITE_32W)
@@ -106,7 +105,7 @@ start:
    stz VERA_data0
    stz VERA_data0
    ; set to Z-level 3, flipped vertically and horizontally
-   lda #(COLLISION | SPRITE_Z3 | SPRITE_VFLIP | SPRITE_HFLIP)
+   lda #(COLLISION2 | SPRITE_Z3 | SPRITE_VFLIP | SPRITE_HFLIP)
    sta VERA_data0
    ; set to 32x32, palette offset 1
    lda #(SPRITE_32H | SPRITE_32W | 1)
@@ -130,8 +129,9 @@ start:
 
 @loop:
    wai
-   bit done
-   bpl @loop
+   jsr GETIN
+   cmp #CHAR_Q
+   bne @loop
    ; restore default IRQ vector
    sei
    lda default_irq_vector
@@ -150,25 +150,27 @@ start:
 custom_irq_handler:
    lda VERA_isr
    bit #VSYNC_BIT
-   beq @check_sprcol ; not VSYNC
+   bne @next_frame
+   jmp @check_sprcol ; not VSYNC
+@next_frame:
    ; go to next frame
    lda frame
    clc
-   adc #<(SPRITE_SIZE << 5)
+   adc #<(SPRITE_SIZE >> 5)
    sta frame
    lda frame+1
-   adc #>(SPRITE_SIZE << 5)
+   adc #>(SPRITE_SIZE >> 5)
    sta frame+1
-   cmp #>(END_SPRITES << 5)
+   cmp #>(END_SPRITES >> 5)
    bne @set_frame
    lda frame
-   cmp #<(END_SPRITES << 5)
+   cmp #<(END_SPRITES >> 5)
    bne @set_frame
-   lda #<(VRAM_sprite_frames << 5)
+   lda #<(VRAM_sprite_frames >> 5)
    sta frame
-   lda #>(VRAM_sprite_frames << 5)
-   sta frame
-   bra @sprcol
+   lda #>(VRAM_sprite_frames >> 5)
+   sta frame+1
+   bra @check_sprcol
 @set_frame:
    stz VERA_ctrl
    VERA_SET_ADDR VRAM_sprattr, 1
@@ -187,23 +189,26 @@ custom_irq_handler:
    ; get mouse position
    ldx #MOUSE_X
    jsr MOUSE_GET
-   ; update shadow position (640-x,480-y)
-   lda #<640
+   ; update shadow position (608-x,448-y)
+   lda #<608
    sec
    sbc MOUSE_X
    sta VERA_data0
-   lda #>640
+   lda #>608
    sbc MOUSE_X+1
    sta VERA_data0
-   lda #<480
+   lda #<448
    sec
    sbc MOUSE_Y
    sta VERA_data0
-   lda #>480
+   lda #>448
    sbc MOUSE_Y+1
    sta VERA_data0
 @check_sprcol:
+   lda VERA_isr
    bit #SPRCOL_BIT
+   beq @continue
+   bit #(COLLISION1 | COLLISION2)
    beq @continue
    lda #CHAR_C
    jsr CHROUT
