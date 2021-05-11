@@ -17,8 +17,7 @@ MOUSE_Y        = MOUSE_X + 2
 VSYNC_BIT      = $01
 SPRCOL_BIT     = $04
 ; ISR/Sprite Attributes:
-COLLISION1     = $10
-COLLISION2     = $20
+COLLISION      = $10
 ; DC_VIDEO:
 SPRITE_LAYER   = $40
 LAYER1         = $20
@@ -30,14 +29,14 @@ SPRITE_HFLIP   = $01
 SPRITE_32H     = $80
 SPRITE_32W     = $20
 ; VRAM addresses:
-VRAM_sprite_frames = $04000
-VRAM_shadow_sprite = VRAM_sprattr + 8
+VRAM_sprite_frames   = $04000
+VRAM_shadow_sprite   = VRAM_sprattr + 8
+VRAM_synch_sprite    = VRAM_shadow_sprite + 8
 SPRITE_SIZE = 32 * 32 / 2 ; 32x32 4bpp
 NUM_FRAMES = 20
 END_SPRITES = VRAM_sprite_frames + (SPRITE_SIZE * NUM_FRAMES)
 
 ; PETSCII
-CHAR_C   = $43
 CHAR_Q   = $51
 
 ; globals
@@ -86,9 +85,8 @@ start:
    lda VERA_data0
    lda VERA_data0
    lda VERA_data0
-   ; set to Z-level 3, no flipping
-   lda #(COLLISION1 | SPRITE_Z3)
-   sta VERA_data0
+   ; leave collision/Z/flipping
+   lda VERA_data0
    ; set to 32x32, palette offset 0
    lda #(SPRITE_32H | SPRITE_32W)
    sta VERA_data0
@@ -105,11 +103,38 @@ start:
    stz VERA_data0
    stz VERA_data0
    ; set to Z-level 3, flipped vertically and horizontally
-   lda #(COLLISION2 | SPRITE_Z3 | SPRITE_VFLIP | SPRITE_HFLIP)
+   lda #(COLLISION | SPRITE_Z3 | SPRITE_VFLIP | SPRITE_HFLIP)
    sta VERA_data0
    ; set to 32x32, palette offset 1
    lda #(SPRITE_32H | SPRITE_32W | 1)
    sta VERA_data0
+
+   ; seup synch sprite (address already set)
+   lda frame
+   sta VERA_data0
+   lda frame+1 ; leave high bit clear for 4bpp
+   sta VERA_data0
+   ; leave position
+   lda VERA_data0
+   lda VERA_data0
+   lda VERA_data0
+   lda VERA_data0
+   ; set to Z-level 3, no flipping
+   lda #(COLLISION | SPRITE_Z3)
+   sta VERA_data0
+   ; set to 32x32, palette offset 0
+   lda #(SPRITE_32H | SPRITE_32W)
+   sta VERA_data0
+
+   ; setup PSG channel 0 to 1000Hz (freq word = $0A7C) sawtooth wave
+   VERA_SET_ADDR VRAM_psg, 1
+   lda #$7C
+   sta VERA_data0
+   lda #$0A
+   sta VERA_data0
+   stz VERA_data0 ; off
+   lda #$40
+   sta VERA_data0 ; sawtooth
 
    ; backup default RAM IRQ vector
    lda IRQVec
@@ -145,13 +170,19 @@ start:
    ; clear shadow sprite
    VERA_SET_ADDR (VRAM_shadow_sprite + 6), 0
    stz VERA_data0
+   ; clear synch sprite
+   VERA_SET_ADDR (VRAM_synch_sprite + 6), 0
+   stz VERA_data0
+   ; turn off sound
+   VERA_SET_ADDR (VRAM_psg+2),0
+   stz VERA_data0
    rts
 
 custom_irq_handler:
    lda VERA_isr
    bit #VSYNC_BIT
    bne @next_frame
-   jmp @check_sprcol ; not VSYNC
+   jmp @continue ; not VSYNC
 @next_frame:
    ; go to next frame
    lda frame
@@ -170,7 +201,6 @@ custom_irq_handler:
    sta frame
    lda #>(VRAM_sprite_frames >> 5)
    sta frame+1
-   bra @check_sprcol
 @set_frame:
    stz VERA_ctrl
    VERA_SET_ADDR VRAM_sprattr, 1
@@ -204,14 +234,27 @@ custom_irq_handler:
    lda #>448
    sbc MOUSE_Y+1
    sta VERA_data0
-@check_sprcol:
+   ; update synch sprite position
+   VERA_SET_ADDR (VRAM_synch_sprite+2),1
+   lda MOUSE_X
+   sta VERA_data0
+   lda MOUSE_X+1
+   sta VERA_data0
+   lda MOUSE_Y
+   sta VERA_data0
+   lda MOUSE_Y+1
+   sta VERA_data0
+   ; check collision
+   stz VERA_ctrl
+   VERA_SET_ADDR (VRAM_psg+2),0
    lda VERA_isr
-   bit #SPRCOL_BIT
-   beq @continue
-   bit #(COLLISION1 | COLLISION2)
-   beq @continue
-   lda #CHAR_C
-   jsr CHROUT
+   bit #COLLISION
+   beq @clear
+   lda #$FF
+   sta VERA_data0 ; play sound
+   bra @continue
+@clear:
+   stz VERA_data0 ; stop sound
 @continue:
    lda #(SPRCOL_BIT | VSYNC_BIT)
    sta VERA_isr ; reset latches
