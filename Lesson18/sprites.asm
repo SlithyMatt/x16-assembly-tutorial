@@ -41,7 +41,7 @@ CHAR_Q   = $51
 
 ; globals
 default_irq_vector: .addr 0
-frame: .word (VRAM_sprite_frames >> 5)
+frame: .word 0
 
 sprites_fn:    .byte "sprites.bin"
 end_sprites_fn:
@@ -97,11 +97,11 @@ start:
    sta VERA_data0
    lda frame+1 ; leave high bit clear for 4bpp
    sta VERA_data0
-   ; set initial position to 0,0
-   stz VERA_data0
-   stz VERA_data0
-   stz VERA_data0
-   stz VERA_data0
+   ; leave position
+   lda VERA_data0
+   lda VERA_data0
+   lda VERA_data0
+   lda VERA_data0
    ; set to Z-level 3, flipped vertically and horizontally
    lda #(COLLISION | SPRITE_Z3 | SPRITE_VFLIP | SPRITE_HFLIP)
    sta VERA_data0
@@ -109,7 +109,7 @@ start:
    lda #(SPRITE_32H | SPRITE_32W | 1)
    sta VERA_data0
 
-   ; seup synch sprite (address already set)
+   ; setup synch sprite (address already set)
    lda frame
    sta VERA_data0
    lda frame+1 ; leave high bit clear for 4bpp
@@ -245,7 +245,6 @@ custom_irq_handler:
    lda MOUSE_Y+1
    sta VERA_data0
    ; check collision
-   stz VERA_ctrl
    VERA_SET_ADDR (VRAM_psg+2),0
    lda VERA_isr
    bit #COLLISION
