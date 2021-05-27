@@ -17,6 +17,11 @@ now are the following lessons:
 - Lesson 11: Advanced Math
 - Lesson 12: Tiles
 - Lesson 13: PSG Sound
+- Lesson 14: Mouse and Joysticks
+- Lesson 15: Bitmaps
+- Lesson 16: All in the Timing
+- Lesson 17: FM Synthesis
+- Lesson 18: Sprites
 
 More to come!
 
