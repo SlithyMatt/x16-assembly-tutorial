@@ -20,6 +20,7 @@ VERA_ien          = $9F26
 VSYNC_BIT         = $01
 
 ; Kernal
+SCREEN_MODE       = $FF5F
 MOUSE_CONFIG      = $FF68
 MOUSE_GET         = $FF6B
 CHROUT            = $FFD2
@@ -56,9 +57,10 @@ start:
 
    ; render palette selector
    stz VERA_ctrl
-   lda #$10 ; stride = 1
+   lda #$11 ; stride = 1
    sta VERA_addr_bank
-   stz VERA_addr_high
+   lda #$B0
+   sta VERA_addr_high
    stz VERA_addr_low
    ; Row 0: top border
    ldx #0
@@ -171,8 +173,9 @@ REMAINDER = 48 + (60-COLORBAR_END)*128
    jsr select_color
 
    ; enable default mouse cursor
+   sec
+   jsr SCREEN_MODE
    lda #1
-   tax
    jsr MOUSE_CONFIG
 
 main_loop:
@@ -234,7 +237,7 @@ select_color: ; Input: A = color
    stz VERA_ctrl
    lda #$20 ; stride = 2
    sta VERA_addr_bank
-   lda #COLORBAR_END ; Y
+   lda #(COLORBAR_END + $B0) ; Y
    sta VERA_addr_high
    lda @old_start_x
    asl
@@ -304,8 +307,12 @@ div5: ; A = A / 5
 
 paint_canvas: ; Input: X/Y = text map coordinates
    stz VERA_ctrl
-   stz VERA_addr_bank ; stride = 0
-   sty VERA_addr_high ; Y
+   lda #$01 ; stride = 0, bank 1
+   sta VERA_addr_bank
+   tya
+   clc
+   adc #$B0
+   sta VERA_addr_high ; Y
    txa
    asl
    inc
