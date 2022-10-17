@@ -1,6 +1,4 @@
 .org $080D
-.segment "STARTUP"
-.segment "INIT"
 .segment "ONCE"
 .segment "CODE"
 
@@ -47,7 +45,7 @@ start:
    inx               ; implied
    lda (ZP_PTR_1,x)  ; zero page indexed indirect
    sta results+1     ; absolute calculated
-   lda (ZP_PTR_1),y  ; zero page indirect indexed with Y
+   lda (ZP_PTR_2),y  ; zero page indirect indexed with Y
    sta results,y     ; absolute indexed with Y
 
    jmp (lookup_ptr)  ; absolute indirect
