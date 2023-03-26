@@ -1,6 +1,5 @@
 .org $080D
 .segment "ONCE"
-.segment "CODE"
 
 ZP_PTR_1 = $30
 ZP_PTR_2 = $32

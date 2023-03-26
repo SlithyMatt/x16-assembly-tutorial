@@ -1,6 +1,5 @@
 .org $080D
 .segment "ONCE"
-.segment "CODE"
 
 start:
    lda #1
