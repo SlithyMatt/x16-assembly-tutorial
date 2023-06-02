@@ -27,15 +27,15 @@ VERA_L1_mapbase   = $9F35
 VERA_L1_tilebase  = $9F36
 
 ; VRAM Addresses
-VRAM_layer1_map   = $00000
-VRAM_layer0_map   = $04000
-VRAM_lowerchars   = $0F000
+VRAM_layer1_map   = $1B000
+VRAM_layer0_map   = $00000
+VRAM_lowerchars   = $0B000
 VRAM_lower_rev    = VRAM_lowerchars + 128*8
-VRAM_petscii      = $0F800
+VRAM_petscii      = $1F000
 VRAM_palette      = $1FA00
 
 ; ROM Banks
-ROM_BANK          = $9F60
+ROM_BANK          = $01
 BASIC_BANK        = 4
 CHARSET_BANK      = 6
 
