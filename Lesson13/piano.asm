@@ -30,9 +30,9 @@ CHROUT            = $FFD2
 GETIN             = $FFE4
 
 ; VRAM Addresses
-CONTROLS_VRAM     = $00200
+CONTROLS_VRAM     = $1B200
 NUM_LABELS_VRAM   = CONTROLS_VRAM + $0207
-KEYS_VRAM         = $00C00
+KEYS_VRAM         = $1BC00
 VRAM_psg          = $1F9C0
 
 ; --- PSG Values ---
