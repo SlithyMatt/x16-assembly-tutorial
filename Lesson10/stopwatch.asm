@@ -165,9 +165,9 @@ custom_irq_handler:
 
 print_display:
    stz VERA_ctrl
-   lda #$20 ; stride = 2
+   lda #$21 ; stride = 2
    sta VERA_addr_bank
-   lda #DISPLAY_Y
+   lda #(DISPLAY_Y | $B0)
    sta VERA_addr_high
    lda #(DISPLAY_X * 2)
    sta VERA_addr_low
