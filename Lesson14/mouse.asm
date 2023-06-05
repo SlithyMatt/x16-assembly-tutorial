@@ -235,7 +235,7 @@ select_color: ; Input: A = color
    sta @old_start_x ; previous color * 5
    ; make old bar bottom black
    stz VERA_ctrl
-   lda #$20 ; stride = 2
+   lda #$21 ; stride = 2
    sta VERA_addr_bank
    lda #(COLORBAR_END + $B0) ; Y
    sta VERA_addr_high

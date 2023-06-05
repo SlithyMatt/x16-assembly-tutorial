@@ -16,6 +16,7 @@ VERA_ien          = $9F26
 VSYNC_BIT         = $01
 
 ; Kernal
+JOYSTICK_SCAN     = $FF53
 JOYSTICK_GET      = $FF56
 CHROUT            = $FFD2
 GETIN             = $FFE4
@@ -81,8 +82,11 @@ main_loop:
 plot_char:
    pha ; push PETSCII code to stack
    stz VERA_ctrl
-   stz VERA_addr_bank ; stride = 0
+   lda #$01
+   sta VERA_addr_bank ; stride = 0
    lda brush_y
+   clc
+   adc #$B0
    sta VERA_addr_high ; Y
    lda brush_x
    asl
@@ -105,8 +109,14 @@ plot_char:
    rts
 
 handle_joystick:
+   jsr JOYSTICK_SCAN
+   lda #1
+   jsr JOYSTICK_GET
+   cpy #0
+   beq @check_buttons
    lda #0
    jsr JOYSTICK_GET
+@check_buttons:
    sta joystick_state
    eor joystick_latch
    sta joystick_latch
