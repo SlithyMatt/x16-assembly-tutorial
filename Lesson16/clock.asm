@@ -30,6 +30,7 @@ VERA_ien             = $9F26
 VERA_isr             = $9F27
 VSYNC_BIT            = $01
 LINE_BIT             = $02
+SCAN_LINE_8          = $40
 IRQ_LINE_8           = $80
 VERA_irqline_l       = $9F28
 VERA_dc_hscale       = $9F2A
@@ -58,9 +59,10 @@ minutes: .byte 0
 seconds: .byte 0
 counter: .byte 0
 color_wave: .byte $6B,$6C,$6F,$61,$61,$6F,$6C,$6B
+irq_line: .byte 0
 
 LINES_PER_PIXEL   = 128/DISPLAY_SCALE
-START_LINE        = DISPLAY_Y * 8 * LINES_PER_PIXEL - LINES_PER_PIXEL/2
+START_LINE        = DISPLAY_Y * 8 * LINES_PER_PIXEL - LINES_PER_PIXEL/2 - 2
 STOP_LINE         = START_LINE + LINES_PER_PIXEL * 8
 
 .macro PRINT_DECIMAL num
@@ -103,11 +105,12 @@ start:
    sta IRQVec
    lda #>custom_irq_handler
    sta IRQVec+1
-   lda #(LINE_BIT | VSYNC_BIT) ; make VERA only generate LINE and VSYNC IRQs
-   sta VERA_ien
    ; set LINE interrupt to start half-pixel above number display
    lda #START_LINE
    sta VERA_irqline_l
+   sta irq_line
+   lda #(LINE_BIT | VSYNC_BIT) ; make VERA only generate LINE and VSYNC IRQs
+   sta VERA_ien
    cli ; enable IRQ now that vector is properly set
 
 @loop:
@@ -134,17 +137,15 @@ start:
 custom_irq_handler:
    lda VERA_isr
    bit #VSYNC_BIT
-   beq @check_line
+   beq @change_line
    jsr print_display
    stz counter
    bra @continue
-@check_line:
-   bit #LINE_BIT
-   beq @continue ; non-LINE IRQ, no change to scroll
+@change_line:
    stz VERA_ctrl
-   lda #$20 ; stride = 2
+   lda #$21 ; stride = 2
    sta VERA_addr_bank
-   lda #DISPLAY_Y
+   lda #(DISPLAY_Y + $B0)
    sta VERA_addr_high
    lda #(DISPLAY_X * 2 + 1)
    sta VERA_addr_low
@@ -156,20 +157,28 @@ custom_irq_handler:
    dey
    bne @color_loop
    inc counter
-   lda VERA_irqline_l
+   lda #8
+   cmp counter
+   beq @reset
+   lda irq_line
    clc
    adc #LINES_PER_PIXEL
    sta VERA_irqline_l
-   bcc @set_line
-   lda #(IRQ_LINE_8 | LINE_BIT | VSYNC_BIT)
+   sta irq_line
+   bcs @high_enable
+   lda #(LINE_BIT | VSYNC_BIT)
    sta VERA_ien
-@set_line:
-   lda VERA_irqline_l
-   cmp #<STOP_LINE
-   bne @quick_return
+   bra @quick_return
+@reset:
    lda #START_LINE
    sta VERA_irqline_l
+   sta irq_line
+   stz counter
    lda #(LINE_BIT | VSYNC_BIT)
+   sta VERA_ien
+   bra @quick_return
+@high_enable:
+   lda #(IRQ_LINE_8 | LINE_BIT | VSYNC_BIT)
    sta VERA_ien
 @quick_return:
    ; reset IRQs
@@ -199,9 +208,9 @@ print_display:
    jsr bin2dec
    sta seconds
    stz VERA_ctrl
-   lda #$20 ; stride = 2
+   lda #$21 ; stride = 2
    sta VERA_addr_bank
-   lda #DISPLAY_Y
+   lda #(DISPLAY_Y + $B0)
    sta VERA_addr_high
    lda #(DISPLAY_X * 2)
    sta VERA_addr_low

@@ -28,7 +28,7 @@ VERA_L0_hscroll_h = $9F31
 BITMAP_PAL_OFFSET = VERA_L0_hscroll_h
 
 ; Kernal
-IOINIT            = $FF81
+SCREEN_MODE       = $FF5F
 SETLFS            = $FFBA
 SETNAM            = $FFBD
 LOAD              = $FFD5
@@ -169,11 +169,40 @@ start:
    lda default_irq_vector+1
    sta IRQVec+1
    cli
-   ; reset VERA
-   lda #$80
-   sta VERA_ctrl
-   jsr IOINIT
-   ; return to BASIC
+   ; reset screen mode
+   lda #0
+   clc
+   jsr SCREEN_MODE
+   ; enable layer 1 only
+   lda #$21
+   sta VERA_dc_video
+   ; let's go to dark mode
+   stz VERA_ctrl
+   lda #($10 | ^VRAM_palette)
+   sta VERA_addr_bank
+   lda #>VRAM_palette
+   sta VERA_addr_high
+   lda #(<VRAM_palette + 2) ; start with index 1
+   sta VERA_addr_low
+   lda #$CC
+   sta VERA_data0
+   sta VERA_data0
+   ; descending shades of gray
+   lda #$AA ; 2
+   sta VERA_data0
+   sta VERA_data0
+   lda #$88 ; 3
+   sta VERA_data0
+   sta VERA_data0
+   lda #$66 ; 4
+   sta VERA_data0
+   sta VERA_data0
+   lda #$44 ; 5
+   sta VERA_data0
+   sta VERA_data0
+   lda #$22 ; 6
+   sta VERA_data0
+   sta VERA_data0   
    rts
 
 
