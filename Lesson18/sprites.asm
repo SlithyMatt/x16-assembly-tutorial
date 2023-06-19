@@ -69,7 +69,8 @@ start:
 
    ; enable custom mouse
    lda #$FF ; custom cursor
-   ldx #1 ; 640x480 scale
+   ldx #80 ; 640x480 scale
+   ldy #60
    jsr MOUSE_CONFIG
 
    ; set initial mouse cursor sprite frame
