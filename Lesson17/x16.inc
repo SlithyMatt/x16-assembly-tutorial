@@ -108,11 +108,11 @@ VERA_audio_data   = $9F3D
 VERA_spi_data     = $9F3E
 VERA_spi_ctrl     = $9F3F
 
-ROM_BANK          = $9F60
-RAM_BANK          = $9F61
+ROM_BANK          = $01
+RAM_BANK          = $00
 
-YM_reg            = $9FE0
-YM_data           = $9FE1
+YM_reg            = $9F40
+YM_data           = $9F41
 
 ; Emulator Registers
 GIF_ctrl          = $9FB5
@@ -177,7 +177,7 @@ CLOCK_SET_DATE_TIME           := $FF4D
 CLOCK_GET_DATE_TIME           := $FF50
 JOYSTICK_SCAN                 := $FF53
 JOYSTICK_GET                  := $FF56
-SCREEN_SET_MODE               := $FF5F
+SCREEN_MODE               		:= $FF5F
 SCREEN_SET_CHARSET            := $FF62
 PFKEY                         := $FF65
 MOUSE_CONFIG                  := $FF68
@@ -254,7 +254,11 @@ FETVec         := $03AF
 
 .macro VERA_SET_ADDR addr, stride
    .ifnblank stride
-      lda #((^addr) | (stride << 4))
+      .if stride < 0
+         lda #((^addr) | $08 | ((0-stride) << 4))
+      .else
+         lda #((^addr) | (stride << 4))
+      .endif
    .else
       lda #(^addr) | $10
    .endif
