@@ -4,7 +4,7 @@ A tutorial for learning 65C02 Assembly Language using the Commander X16.
 This is a repo containing all the materials from my YouTube series. Available
 now are the following lessons:
 
-- Lesson 1: The Basics
+- Lesson 1: The Basics [2nd Edition now available!]
 - Lesson 2: Addressing Modes
 - Lesson 3: Branching and Subroutines
 - Lesson 4: Arithmetic and Logic
@@ -164,23 +164,14 @@ export PATH=$PATH:$HOME/workspace/cc65/bin
 
 To make this environment take hold, you will need to close and reopen your terminal.
 Then you can go into any of the Lesson directories and build the code just as you
-have seen it in the videos. **Please note** that if you already had the release
-build of cc65 installed that it will not work with the build scripts here, as
-they do not have X16 support built in. You will need to build the latest commit
-yourself. When you do this, make sure that you uninstall the release build of
-cc65 or at least remove it from your PATH. You should verify that the correct
-version is going to run with this simple command:
+have seen it in the videos.
 
-```
-which cl65
-```
-
-If this does not print out the location of the version you just built, you need
-to get your PATH in the correct order.
+If you don't want to build cc65 yourself (though it *is* recommended), you can get pre-built binaries for
+several different Linux distributions here: https://software.opensuse.org/download.html?project=home%3Astrik&package=cc65
 
 # Installing the Commander X16 Emulator
 
-You can download pre-built binaries from the official website: https://www.commanderx16.com/forum/files/
+You can download pre-built binaries from the official website: https://cx16forum.com/forum/viewforum.php?f=30
 
 Or, you can build the emulator and the ROM image yourself from the GitHub repos:
 - https://github.com/commanderx16/x16-emulator
@@ -205,5 +196,5 @@ workflow exactly as seen in these videos.
 - https://en.wikipedia.org/wiki/Boolean_algebra
 - https://en.wikibooks.org/wiki/6502_Assembly   - Baseline 6502 instruction set
 - http://www.6502.org/tutorials/65c02opcodes.html  - Additional instructions and addressing modes for 65C02
-- https://atom.io/packages/language-65asm - 6502 assembly syntax highlighting for Atom
+- https://marketplace.visualstudio.com/items?itemName=tlgkccampbell.code-ca65 - 6502 assembly syntax highlighting for VSCode/VSCodium
 - https://style64.org/petscii/ - An interactive PETSCII table
