@@ -32,7 +32,9 @@ with these code examples - it is all [free and open source](LICENSE).
 
 The build toolchain for this project requires a GNU environment, which is
 natively available on most Linux and Unix (include Mac) platforms. For
-Windows, you will need a program called Cygwin that will provide a GNU
+Windows, I would strongly recommend using the Windows Subsystem for Linux (WSL) and following
+the instruction below for Linux, but if you don't have that, you will need a program
+called Cygwin that will provide a GNU
 userspace in Windows that will give you a Unix-like environment for development.
 
 ## Installing and Configuring Cygwin
