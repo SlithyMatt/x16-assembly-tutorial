@@ -5,7 +5,7 @@ This is a repo containing all the materials from my YouTube series. Available
 now are the following lessons:
 
 - Lesson 1: The Basics [2nd Edition now available!]
-- Lesson 2: Addressing Modes
+- Lesson 2: Addressing Modes [2nd Edition now available!]
 - Lesson 3: Branching and Subroutines
 - Lesson 4: Arithmetic and Logic
 - Lesson 5: The Stack
